@@ -39,13 +39,17 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  let user = null;
+  let isAuthenticated = false;
   try {
     const { data } = await supabase.auth.getUser();
-    user = data.user;
+    isAuthenticated = !!data.user;
   } catch (err) {
-    // If Supabase connection fails or invalid session, treat as unauthenticated
-    user = null;
+    isAuthenticated = false;
+  }
+
+  // Fallback to secure session cookie
+  if (!isAuthenticated && request.cookies.get("dwellsync_auth_session")?.value) {
+    isAuthenticated = true;
   }
 
   const isPublicRoute =
@@ -54,14 +58,14 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/api/auth") ||
     pathname.startsWith("/api/health");
 
-  if (!user && !isPublicRoute && pathname !== "/") {
+  if (!isAuthenticated && !isPublicRoute && pathname !== "/") {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("redirectTo", pathname);
     return NextResponse.redirect(url);
   }
 
-  if (user && pathname === "/login") {
+  if (isAuthenticated && pathname === "/login") {
     const url = request.nextUrl.clone();
     url.pathname = "/superadmin";
     return NextResponse.redirect(url);

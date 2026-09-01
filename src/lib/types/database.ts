@@ -190,6 +190,16 @@ export interface Unit {
   area_sqft?: number | null;
   carpet_area_sqft?: number | null;
   built_up_area_sqft?: number | null;
+  super_built_up_area_sqft?: number | null;
+  bedrooms?: number | null;
+  bathrooms?: number | null;
+  balconies?: number | null;
+  parking_slots?: number | null;
+  monthly_maintenance_override?: number | null;
+  intercom_number?: string | null;
+  meter_number_electricity?: string | null;
+  meter_number_gas?: string | null;
+  meter_number_water?: string | null;
   status: UnitStatus;
   created_at: string;
   updated_at: string;
@@ -235,12 +245,15 @@ export interface FamilyMember {
   id: string;
   society_id: string;
   unit_id: string;
-  primary_member_id: string;
+  primary_member_id?: string;
+  primary_resident_user_id?: string;
   full_name: string;
   relationship: FamilyRelationship;
   phone?: string | null;
   email?: string | null;
-  is_emergency_contact: boolean;
+  is_minor?: boolean;
+  gate_access_allowed?: boolean;
+  is_emergency_contact?: boolean;
   created_at: string;
   updated_at: string;
   primary_member?: Profile;
@@ -342,3 +355,61 @@ export interface AuditLog {
   effective_user?: Profile;
   society?: Society;
 }
+
+export type NoticeCategory = "GENERAL" | "MAINTENANCE" | "URGENT" | "EVENT" | "BILLING";
+export type NoticePriority = "LOW" | "MEDIUM" | "HIGH" | "EMERGENCY";
+export type NoticeStatus = "PUBLISHED" | "DRAFT" | "ARCHIVED";
+
+export interface Notice {
+  id: string;
+  society_id: string;
+  title: string;
+  description: string;
+  category: NoticeCategory;
+  priority: NoticePriority;
+  published_by: string;
+  published_at: string;
+  expires_at?: string | null;
+  attachment_url?: string | null;
+  status: NoticeStatus;
+  created_at: string;
+  updated_at: string;
+  publisher?: Profile;
+}
+
+export type DocumentCategory =
+  | "SOCIETY_BYLAWS"
+  | "AGM_MINUTES"
+  | "FINANCIAL_REPORT"
+  | "FORMS_TEMPLATES"
+  | "RULES_REGULATIONS";
+
+export type DocumentVisibility = "ALL_RESIDENTS" | "OWNERS_ONLY" | "COMMITTEE_ONLY";
+
+export interface SocietyDocument {
+  id: string;
+  society_id: string;
+  title: string;
+  description?: string | null;
+  category: DocumentCategory;
+  file_url: string;
+  file_type?: string | null;
+  file_size_kb?: number | null;
+  visibility: DocumentVisibility;
+  uploaded_by: string;
+  created_at: string;
+  updated_at: string;
+  uploader?: Profile;
+}
+
+export interface ProfilePrivacySettings {
+  id: string;
+  user_id: string;
+  profile_visible_in_directory: boolean;
+  phone_visible_in_directory: boolean;
+  email_visible_in_directory: boolean;
+  allow_neighbor_chat: boolean;
+  created_at: string;
+  updated_at: string;
+}
+

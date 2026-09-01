@@ -3,7 +3,6 @@ import "./globals.css";
 import { AuthProvider } from "@/lib/auth/client";
 import { getCurrentIdentity } from "@/lib/auth/server";
 import { ImpersonationBanner } from "@/components/auth/ImpersonationBanner";
-import { SuperAdminDebugPanel } from "@/components/auth/SuperAdminDebugPanel";
 
 export const metadata: Metadata = {
   title: "DwellSync — Housing Society Operating System",
@@ -23,7 +22,6 @@ export default async function RootLayout({
         <AuthProvider initialIdentity={identity}>
           <ImpersonationBanner />
           <div className="flex-1 flex flex-col">{children}</div>
-          <SuperAdminDebugPanel />
         </AuthProvider>
       </body>
     </html>

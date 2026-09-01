@@ -12,6 +12,7 @@ export async function POST() {
     const cookieStore = await cookies();
 
     cookieStore.delete(IMPERSONATION_COOKIE_NAME);
+    cookieStore.delete("dwellsync_auth_session");
 
     if (identity?.isSuperAdmin) {
       await recordAuditLog({

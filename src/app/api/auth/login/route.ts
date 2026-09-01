@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { recordAuditLog } from "@/lib/auth/audit";
+import { getDashboardPathForRole } from "@/lib/auth/persona";
 
 export async function POST(req: Request) {
   try {
@@ -50,13 +51,22 @@ export async function POST(req: Request) {
         resourceId: data.user.id,
         metadata: { email: data.user.email },
       });
+    } else {
+      await recordAuditLog({
+        actorUserId: data.user.id,
+        societyId: membership?.society_id || undefined,
+        action: "USER_LOGIN",
+        resourceType: "auth.users",
+        resourceId: data.user.id,
+        metadata: { email: data.user.email, role_id: membership?.role_id },
+      });
     }
 
-    let redirectUrl = "/superadmin";
-    if (!isSuperAdmin && membership?.society_id) {
-      redirectUrl = `/society/${membership.society_id}/dashboard`;
-    } else if (!isSuperAdmin) {
-      redirectUrl = "/unauthorized";
+    let redirectUrl = "/unauthorized";
+    if (isSuperAdmin) {
+      redirectUrl = "/superadmin/view-as";
+    } else if (membership) {
+      redirectUrl = getDashboardPathForRole(membership.role_id, membership.society_id);
     }
 
     return NextResponse.json({

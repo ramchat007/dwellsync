@@ -7,6 +7,7 @@ export async function GET() {
   const startTime = Date.now();
   let dbStatus = "unknown";
   let supabaseStatus = "ok";
+  let authStatus = "ok";
   let errorMessage: string | undefined;
 
   const hasUrl = !!process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -41,6 +42,7 @@ export async function GET() {
       application: "ok",
       database: dbStatus,
       supabase: supabaseStatus,
+      auth: authStatus,
       environment: envConfigured ? "configured" : "incomplete",
       timestamp: new Date().toISOString(),
       latency_ms: latencyMs,
@@ -49,4 +51,3 @@ export async function GET() {
     { status: dbStatus === "error" || dbStatus === "unreachable" ? 503 : 200 }
   );
 }
-

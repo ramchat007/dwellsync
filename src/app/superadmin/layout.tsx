@@ -12,7 +12,7 @@ export default async function SuperAdminLayout({
 }) {
   const identity = await getCurrentIdentity();
 
-  if (!identity || !identity.isSuperAdmin) {
+  if (!identity || !identity.isSuperAdmin || identity.isImpersonating) {
     redirect("/unauthorized");
   }
 

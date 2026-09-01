@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentIdentity } from "@/lib/auth/server";
+import { resolveUserExperience } from "@/lib/auth/persona";
 
 export const dynamic = "force-dynamic";
 
@@ -10,18 +11,6 @@ export default async function DashboardRedirectPage() {
     redirect("/login");
   }
 
-  if (identity.isSuperAdmin) {
-    redirect("/superadmin");
-  }
-
-  if (identity.currentSociety) {
-    redirect(`/society/${identity.currentSociety.id}/dashboard`);
-  }
-
-  if (identity.availableSocieties && identity.availableSocieties.length > 0) {
-    redirect(`/society/${identity.availableSocieties[0].society_id}/dashboard`);
-  }
-
-  redirect("/unauthorized");
+  const { dashboardPath } = resolveUserExperience(identity);
+  redirect(dashboardPath);
 }
-

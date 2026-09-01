@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { createServerSupabaseClient } from "../supabase/server";
 import { createAdminClient } from "../supabase/admin";
 import { getActiveImpersonationSession } from "./impersonation";
+import { getAuthSessionCookie } from "./session";
 import { getPermissionsForRole, roleHasPermission } from "./permissions";
 import { UserIdentity } from "../types/auth";
 import { Profile, RoleId, Society, SocietyMembership } from "../types/database";
@@ -18,7 +19,21 @@ export async function getCurrentIdentity(): Promise<UserIdentity | null> {
     error,
   } = await supabase.auth.getUser();
 
-  if (error || !user) {
+  let resolvedUserId: string | null = user?.id || null;
+  let resolvedEmail: string = user?.email || "";
+  let resolvedPhone: string | null = user?.phone || null;
+
+  // Fallback to secure session cookie if Supabase user is not found
+  if (!resolvedUserId) {
+    const session = await getAuthSessionCookie();
+    if (session?.userId) {
+      resolvedUserId = session.userId;
+      resolvedEmail = session.email || "";
+      resolvedPhone = session.phone || null;
+    }
+  }
+
+  if (!resolvedUserId) {
     return null;
   }
 
@@ -29,16 +44,16 @@ export async function getCurrentIdentity(): Promise<UserIdentity | null> {
   const { data: callerProfile } = await adminClient
     .from("profiles")
     .select("*")
-    .eq("id", user.id)
-    .single();
+    .eq("id", resolvedUserId)
+    .maybeSingle();
 
   const fallbackProfile: Profile = callerProfile || {
-    id: user.id,
-    email: user.email || "",
-    full_name: user.user_metadata?.full_name || user.email?.split("@")[0] || "User",
-    display_name: user.user_metadata?.display_name || user.email?.split("@")[0] || "User",
-    avatar_url: user.user_metadata?.avatar_url || null,
-    phone: user.user_metadata?.phone || null,
+    id: resolvedUserId,
+    email: resolvedEmail,
+    full_name: resolvedEmail.split("@")[0] || "User",
+    display_name: resolvedEmail.split("@")[0] || "User",
+    avatar_url: null,
+    phone: resolvedPhone,
     status: "ACTIVE",
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
@@ -47,7 +62,7 @@ export async function getCurrentIdentity(): Promise<UserIdentity | null> {
   const { data: platformAdmin } = await adminClient
     .from("platform_admins")
     .select("id, role_id")
-    .eq("user_id", user.id)
+    .eq("user_id", resolvedUserId)
     .eq("role_id", "SUPER_ADMIN")
     .maybeSingle();
 
@@ -56,7 +71,7 @@ export async function getCurrentIdentity(): Promise<UserIdentity | null> {
   // 1. Evaluate Impersonation Mode
   const impersonationSession = await getActiveImpersonationSession();
 
-  if (impersonationSession && impersonationSession.original_admin_id === user.id) {
+  if (impersonationSession && impersonationSession.original_admin_id === resolvedUserId) {
     const targetProfile: Profile = impersonationSession.target_user || {
       id: impersonationSession.target_user_id,
       email: "impersonated@dwellsync.internal",
@@ -82,7 +97,7 @@ export async function getCurrentIdentity(): Promise<UserIdentity | null> {
       .eq("status", "ACTIVE");
 
     return {
-      user: { id: user.id, email: user.email || "" },
+      user: { id: resolvedUserId, email: resolvedEmail },
       profile: targetProfile,
       isAuthenticated: true,
       isSuperAdmin: true,
@@ -101,7 +116,7 @@ export async function getCurrentIdentity(): Promise<UserIdentity | null> {
   // 2. Normal Super Admin Platform Mode
   if (isCallerSuperAdmin) {
     return {
-      user: { id: user.id, email: user.email || "" },
+      user: { id: resolvedUserId, email: resolvedEmail },
       profile: fallbackProfile,
       isAuthenticated: true,
       isSuperAdmin: true,
@@ -124,7 +139,7 @@ export async function getCurrentIdentity(): Promise<UserIdentity | null> {
       *,
       society:societies (*)
     `)
-    .eq("user_id", user.id)
+    .eq("user_id", resolvedUserId)
     .eq("status", "ACTIVE")
     .order("created_at", { ascending: true });
 
@@ -141,7 +156,7 @@ export async function getCurrentIdentity(): Promise<UserIdentity | null> {
   const permissions = getPermissionsForRole(userRole);
 
   return {
-    user: { id: user.id, email: user.email || "" },
+    user: { id: resolvedUserId, email: resolvedEmail },
     profile: fallbackProfile,
     isAuthenticated: true,
     isSuperAdmin: false,
@@ -168,7 +183,7 @@ export async function requireAuth(): Promise<UserIdentity> {
 export async function requireSuperAdmin(): Promise<UserIdentity> {
   const identity = await requireAuth();
 
-  if (!identity.isSuperAdmin) {
+  if (!identity.isSuperAdmin || identity.isImpersonating) {
     redirect("/unauthorized");
   }
 

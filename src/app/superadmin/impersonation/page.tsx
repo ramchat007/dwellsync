@@ -1,6 +1,6 @@
 import React from "react";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getCurrentIdentity } from "@/lib/auth/server";
+import { requireSuperAdmin } from "@/lib/auth/server";
 import { ImpersonationSession } from "@/lib/types/database";
 import { UserCheck, ShieldAlert, CheckCircle2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +10,7 @@ import { formatDate } from "@/lib/utils";
 export const dynamic = "force-dynamic";
 
 export default async function SuperAdminImpersonationPage() {
-  await getCurrentIdentity();
+  await requireSuperAdmin();
   const adminClient = createAdminClient();
 
   const { data: sessions } = await adminClient
@@ -28,7 +28,7 @@ export default async function SuperAdminImpersonationPage() {
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       <div>
-        <h1 className="text-xl font-bold text-slate-900">Impersonation Session Registry</h1>
+        <h1 className="text-xl font-bold text-slate-900">Impersonation & View-As Session Registry</h1>
         <p className="text-xs text-slate-500">
           Server-controlled, cryptographic session registry for platform troubleshooting.
         </p>

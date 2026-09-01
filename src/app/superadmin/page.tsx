@@ -50,9 +50,9 @@ export default async function SuperAdminDashboardPage() {
         }
         actions={
           <div className="flex items-center gap-2">
-            <Link href="/superadmin/users">
+            <Link href="/superadmin/view-as">
               <button className="px-3.5 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-semibold shadow transition-all flex items-center gap-1.5">
-                <UserCheck className="w-4 h-4" /> Impersonate Persona
+                <UserCheck className="w-4 h-4" /> View-As Persona Console
               </button>
             </Link>
             <Link href="/superadmin/societies">
