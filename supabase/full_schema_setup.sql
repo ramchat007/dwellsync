@@ -1,11 +1,13 @@
 -- ==============================================================================
--- DWELLSYNC COMPLETE DATABASE SCHEMA & SUPER ADMIN INITIALIZATION SCRIPT
--- Run this entire script in your Supabase SQL Editor to set up all tables & permissions
+-- DWELLSYNC COMPLETE MASTER DATABASE SCHEMA & INITIALIZATION SCRIPT (PHASES 0–5)
+-- Run this entire script in your Supabase SQL Editor in ONE GO.
+-- It creates all tables, triggers, helper functions, roles, RLS policies, sample data,
+-- and initializes your Super Admin account (ramchat007@gmail.com / +919820160376).
 -- ==============================================================================
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- 1. Profiles Table
+-- 1. Profiles Table (Global user identity)
 CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   email TEXT,
@@ -51,7 +53,7 @@ CREATE TABLE IF NOT EXISTS public.societies (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 3. Roles Table
+-- 3. Roles Table (System RBAC)
 CREATE TABLE IF NOT EXISTS public.roles (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
@@ -213,23 +215,62 @@ CREATE TABLE IF NOT EXISTS public.family_members (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 14. Invitations Table
-CREATE TABLE IF NOT EXISTS public.invitations (
+-- 14. Notices Table (Phase 5)
+CREATE TABLE IF NOT EXISTS public.notices (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   society_id UUID NOT NULL REFERENCES public.societies(id) ON DELETE CASCADE,
-  unit_id UUID REFERENCES public.units(id) ON DELETE SET NULL,
-  email TEXT,
-  phone TEXT,
-  invited_role_id TEXT NOT NULL REFERENCES public.roles(id) ON DELETE RESTRICT,
-  invited_by UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  token TEXT UNIQUE NOT NULL,
-  status TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'ACCEPTED', 'EXPIRED', 'REVOKED')),
-  expires_at TIMESTAMPTZ NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL,
+  category TEXT NOT NULL DEFAULT 'GENERAL' CHECK (
+    category IN ('GENERAL', 'MAINTENANCE', 'URGENT', 'EVENT', 'BILLING')
+  ),
+  priority TEXT NOT NULL DEFAULT 'MEDIUM' CHECK (
+    priority IN ('LOW', 'MEDIUM', 'HIGH', 'EMERGENCY')
+  ),
+  published_by UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  published_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  expires_at TIMESTAMPTZ,
+  attachment_url TEXT,
+  status TEXT NOT NULL DEFAULT 'PUBLISHED' CHECK (
+    status IN ('PUBLISHED', 'DRAFT', 'ARCHIVED')
+  ),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 15. Platform Admins Table (Super Admin Platform-Level Privilege)
+-- 15. Documents Table (Phase 5)
+CREATE TABLE IF NOT EXISTS public.documents (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  society_id UUID NOT NULL REFERENCES public.societies(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  description TEXT,
+  category TEXT NOT NULL DEFAULT 'SOCIETY_BYLAWS' CHECK (
+    category IN ('SOCIETY_BYLAWS', 'AGM_MINUTES', 'FINANCIAL_REPORT', 'FORMS_TEMPLATES', 'RULES_REGULATIONS')
+  ),
+  file_url TEXT NOT NULL,
+  file_type TEXT,
+  file_size_kb INTEGER,
+  visibility TEXT NOT NULL DEFAULT 'ALL_RESIDENTS' CHECK (
+    visibility IN ('ALL_RESIDENTS', 'OWNERS_ONLY', 'COMMITTEE_ONLY')
+  ),
+  uploaded_by UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 16. Profile Privacy Settings Table (Phase 5)
+CREATE TABLE IF NOT EXISTS public.profile_privacy_settings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID UNIQUE NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  profile_visible_in_directory BOOLEAN NOT NULL DEFAULT TRUE,
+  phone_visible_in_directory BOOLEAN NOT NULL DEFAULT FALSE,
+  email_visible_in_directory BOOLEAN NOT NULL DEFAULT FALSE,
+  allow_neighbor_chat BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 17. Platform Admins Table (Super Admin Platform-Level Privilege)
 CREATE TABLE IF NOT EXISTS public.platform_admins (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID UNIQUE NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
@@ -238,7 +279,7 @@ CREATE TABLE IF NOT EXISTS public.platform_admins (
   created_by UUID REFERENCES public.profiles(id)
 );
 
--- 16. Impersonation Sessions Table
+-- 18. Impersonation Sessions Table
 CREATE TABLE IF NOT EXISTS public.impersonation_sessions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   original_admin_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
@@ -253,7 +294,7 @@ CREATE TABLE IF NOT EXISTS public.impersonation_sessions (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 17. Audit Logs Table (Append-Only)
+-- 19. Audit Logs Table (Append-Only)
 CREATE TABLE IF NOT EXISTS public.audit_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   actor_user_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
@@ -268,13 +309,6 @@ CREATE TABLE IF NOT EXISTS public.audit_logs (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Indexes for high performance lookup
-CREATE INDEX IF NOT EXISTS idx_memberships_user ON public.society_memberships(user_id);
-CREATE INDEX IF NOT EXISTS idx_memberships_society ON public.society_memberships(society_id);
-CREATE INDEX IF NOT EXISTS idx_platform_admins_user ON public.platform_admins(user_id);
-CREATE INDEX IF NOT EXISTS idx_impersonation_token ON public.impersonation_sessions(session_token);
-CREATE INDEX IF NOT EXISTS idx_audit_logs_actor ON public.audit_logs(actor_user_id);
-
 -- Helper Security Functions
 CREATE OR REPLACE FUNCTION public.is_super_admin(check_user_id UUID DEFAULT auth.uid())
 RETURNS BOOLEAN AS $$
@@ -285,22 +319,6 @@ BEGIN
   RETURN EXISTS (
     SELECT 1 FROM public.platform_admins
     WHERE user_id = check_user_id AND role_id = 'SUPER_ADMIN'
-  );
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
-
-CREATE OR REPLACE FUNCTION public.has_society_role(check_user_id UUID, check_society_id UUID, role_names TEXT[])
-RETURNS BOOLEAN AS $$
-BEGIN
-  IF check_user_id IS NULL OR check_society_id IS NULL THEN
-    RETURN FALSE;
-  END IF;
-  RETURN EXISTS (
-    SELECT 1 FROM public.society_memberships
-    WHERE user_id = check_user_id
-      AND society_id = check_society_id
-      AND role_id = ANY(role_names)
-      AND status = 'ACTIVE'
   );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
@@ -325,7 +343,7 @@ ON CONFLICT (id) DO UPDATE SET
   description = EXCLUDED.description,
   is_platform_role = EXCLUDED.is_platform_role;
 
--- Enable Row Level Security (RLS) on all core tables
+-- Enable Row Level Security (RLS) on all tables
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.societies ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.buildings ENABLE ROW LEVEL SECURITY;
@@ -336,7 +354,9 @@ ALTER TABLE public.society_memberships ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.unit_ownerships ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.unit_occupancies ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.family_members ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.invitations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.notices ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.documents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.profile_privacy_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.platform_admins ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.impersonation_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
@@ -376,9 +396,8 @@ FROM public.profiles
 WHERE email = 'ramchat007@gmail.com' OR phone = '+919820160376'
 ON CONFLICT (user_id) DO UPDATE SET role_id = 'SUPER_ADMIN';
 
--- Confirmation Query
+-- Verification Query
 SELECT p.id, p.email, p.phone, p.full_name, pa.role_id 
 FROM public.profiles p
 JOIN public.platform_admins pa ON pa.user_id = p.id
-WHERE p.email = 'ramchat007@gmail.com';
-
+WHERE p.email = 'ramchat007@gmail.com' OR p.phone = '+919820160376';
