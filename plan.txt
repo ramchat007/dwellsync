@@ -1,0 +1,30 @@
+1. Society Digitalization
+2. Society Profile
+3. Resident Directory Flat wise
+4. Complaints / Helpdesk could
+5. Society Notice Board
+6. Maintenance / Billing
+7. Visitor Management
+8. Security Guard App
+9. Staff Management
+10. Assets & Maintenance
+11. Committee Dashboard
+12. Builder Handover - new society Handover Management
+13. Digital AGM
+14. Documents
+15. Multi-tenant architecture
+16. Role system
+17. Pricing model - FREE, STANDARD, PRO, ENTERPRISE
+18. property-management company could manage
+19. AI Meeting Assistant - MOM generator - Automatically creates: Minutes, Decisions, Action items, Responsible persons, Deadlines
+20. Language change
+21. Free Migration
+22. Make WhatsApp a channel, not the enemy
+23. Convert discussion → task
+
+And explain why:
+
+⚠ 3 AMCs expire within 30 days
+⚠ 18 complaints breached SLA
+⚠ ₹1.42L outstanding
+✓ Fire certificates up to date
