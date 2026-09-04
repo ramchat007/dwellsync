@@ -41,38 +41,14 @@ export async function getCurrentIdentity(): Promise<UserIdentity | null> {
   const cookieStore = await cookies();
   const preferredSocietyId = cookieStore.get(ACTIVE_SOCIETY_COOKIE_NAME)?.value;
 
-  // 1. Resolve Profile by ID, Email, or Phone
-  let callerProfile: Profile | null = null;
-  const { data: profileById } = await adminClient
+  const { data: callerProfile } = await adminClient
     .from("profiles")
     .select("*")
     .eq("id", resolvedUserId)
     .maybeSingle();
 
-  if (profileById) {
-    callerProfile = profileById as Profile;
-  } else if (resolvedEmail) {
-    const { data: profileByEmail } = await adminClient
-      .from("profiles")
-      .select("*")
-      .eq("email", resolvedEmail)
-      .maybeSingle();
-    if (profileByEmail) callerProfile = profileByEmail as Profile;
-  }
-
-  if (!callerProfile && resolvedPhone) {
-    const { data: profileByPhone } = await adminClient
-      .from("profiles")
-      .select("*")
-      .eq("phone", resolvedPhone)
-      .maybeSingle();
-    if (profileByPhone) callerProfile = profileByPhone as Profile;
-  }
-
-  const effectiveProfileId = callerProfile?.id || resolvedUserId;
-
   const fallbackProfile: Profile = callerProfile || {
-    id: effectiveProfileId,
+    id: resolvedUserId,
     email: resolvedEmail,
     full_name: resolvedEmail.split("@")[0] || "User",
     display_name: resolvedEmail.split("@")[0] || "User",
@@ -83,12 +59,10 @@ export async function getCurrentIdentity(): Promise<UserIdentity | null> {
     updated_at: new Date().toISOString(),
   };
 
-  // 2. Check Platform Super Admin Status in database
-  const targetUserIds = Array.from(new Set([resolvedUserId, effectiveProfileId])).filter(Boolean);
   const { data: platformAdmin } = await adminClient
     .from("platform_admins")
     .select("id, role_id")
-    .in("user_id", targetUserIds)
+    .eq("user_id", resolvedUserId)
     .eq("role_id", "SUPER_ADMIN")
     .maybeSingle();
 
