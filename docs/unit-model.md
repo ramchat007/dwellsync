@@ -1,4 +1,4 @@
-# DwellSync — Physical Unit Model & Bulk Generation (Phase 1)
+# DwellSyncHub — Physical Unit Model & Bulk Generation (Phase 1)
 
 ## Overview
 

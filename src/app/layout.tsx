@@ -5,7 +5,7 @@ import { getCurrentIdentity } from "@/lib/auth/server";
 import { ImpersonationBanner } from "@/components/auth/ImpersonationBanner";
 
 export const metadata: Metadata = {
-  title: "DwellSync — Housing Society Operating System",
+  title: "DwellSyncHub — Housing Society Operating System",
   description: "Every Rupee. Every Task. Every Decision. Accountable.",
 };
 

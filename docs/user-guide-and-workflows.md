@@ -1,13 +1,13 @@
-# DwellSync — Product Architecture, Login & User Journey Guide
+# DwellSyncHub — Product Architecture, Login & User Journey Guide
 
-Welcome to **DwellSync** — the Multi-Tenant Housing Society Operating System.  
+Welcome to **DwellSyncHub** — the Multi-Tenant Housing Society Operating System.  
 Philosophy: *"Every Rupee. Every Task. Every Decision. Accountable."*
 
 ---
 
 ## 1. How Authentication & Login Works
 
-DwellSync uses a **Passwordless-First, Identity-Centric Authentication Flow**:
+DwellSyncHub uses a **Passwordless-First, Identity-Centric Authentication Flow**:
 1. **Neutral Login Screen** ([`http://localhost:3000/login`](http://localhost:3000/login)):
    - You enter your Indian Mobile Number (`+91 98201 60376`) or Email (`ramchat007@gmail.com`).
    - Click **Send Verification Code**.
@@ -103,7 +103,7 @@ DwellSync uses a **Passwordless-First, Identity-Centric Authentication Flow**:
 
 ### Do you have to run all migration files one-by-one?
 **No!** You only need to run **one single master SQL script**:
-📄 [`supabase/full_schema_setup.sql`](file:///c:/Rupesh/React%20Projects/DwellSync/supabase/full_schema_setup.sql)
+📄 [`supabase/full_schema_setup.sql`](file:///c:/Rupesh/React%20Projects/DwellSyncHub/supabase/full_schema_setup.sql)
 
 Open **Supabase Dashboard $\rightarrow$ SQL Editor**, paste the content of `supabase/full_schema_setup.sql`, and click **Run**. It automatically builds:
 - All 19 database tables.

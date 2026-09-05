@@ -29,6 +29,7 @@ export const onboardingSchema = z.object({
   // Step 3: Society Configuration
   timezone: z.string().default("Asia/Kolkata"),
   currency: z.string().default("INR"),
+  status: z.enum(["ONBOARDING", "ACTIVE", "SUSPENDED", "ARCHIVED"]).default("ONBOARDING"),
 
   // Step 4: Initial Structure (Optional towers to pre-create)
   towers: z

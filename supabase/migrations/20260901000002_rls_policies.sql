@@ -1,4 +1,4 @@
--- DwellSync Pre-Phase 0 Row Level Security (RLS) Policies
+-- DwellSyncHub Pre-Phase 0 Row Level Security (RLS) Policies
 -- Implements robust tenant isolation, platform admin security, and append-only audit logging
 
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;

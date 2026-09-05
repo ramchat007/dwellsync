@@ -67,7 +67,7 @@ export function Sidebar({ className }: { className?: string }) {
           D
         </div>
         <div>
-          <div className="font-bold text-sm text-white tracking-tight">DwellSync</div>
+          <div className="font-bold text-sm text-white tracking-tight">DwellSyncHub</div>
           <div className="text-[10px] text-slate-400 font-mono truncate max-w-[170px]">
             {isSuperAdminContext
               ? "Platform Administration"

@@ -6,7 +6,7 @@ import { recordAuditLog } from "./audit";
 import { ImpersonationResult, ImpersonationStartRequest } from "../types/auth";
 import { ImpersonationSession, RoleId } from "../types/database";
 
-export const IMPERSONATION_COOKIE_NAME = "dwellsync_impersonation_token";
+export const IMPERSONATION_COOKIE_NAME = "DwellSyncHub_impersonation_token";
 
 export async function verifyRealSuperAdmin(userId: string): Promise<boolean> {
   if (!userId) return false;

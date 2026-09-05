@@ -106,7 +106,7 @@ export class AuthService {
 
       const newProfile: Profile = {
         id: userId,
-        email: isMobile ? `${canonicalIdentifier.replace("+", "")}@dwellsync.user` : canonicalIdentifier,
+        email: isMobile ? `${canonicalIdentifier.replace("+", "")}@DwellSyncHub.user` : canonicalIdentifier,
         full_name: defaultName,
         display_name: defaultName,
         phone: isMobile ? canonicalIdentifier : null,
@@ -200,7 +200,7 @@ export class AuthService {
 
       // Persist active society in cookie
       const cookieStore = await cookies();
-      cookieStore.set("dwellsync_active_society", single.society_id, {
+      cookieStore.set("DwellSyncHub_active_society", single.society_id, {
         path: "/",
         httpOnly: false,
         sameSite: "lax",

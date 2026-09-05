@@ -20,7 +20,7 @@ export async function middleware(request: NextRequest) {
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL || "https://dummy-project.supabase.co",
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "dummy-anon-key-dwellsync-prephase0",
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "dummy-anon-key-DwellSyncHub-prephase0",
     {
       cookies: {
         getAll() {
@@ -48,7 +48,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Fallback to secure session cookie
-  if (!isAuthenticated && request.cookies.get("dwellsync_auth_session")?.value) {
+  if (!isAuthenticated && request.cookies.get("DwellSyncHub_auth_session")?.value) {
     isAuthenticated = true;
   }
 
@@ -66,8 +66,9 @@ export async function middleware(request: NextRequest) {
   }
 
   if (isAuthenticated && pathname === "/login") {
-    const url = request.nextUrl.clone();
-    url.pathname = "/superadmin";
+    const redirectTo = request.nextUrl.searchParams.get("redirectTo");
+    const target = redirectTo && redirectTo.startsWith("/") ? redirectTo : "/dashboard";
+    const url = new URL(target, request.url);
     return NextResponse.redirect(url);
   }
 

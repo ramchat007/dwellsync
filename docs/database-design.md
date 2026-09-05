@@ -1,4 +1,4 @@
-# DwellSync — Database Design
+# DwellSyncHub — Database Design
 
 ## Multi-Tenant Schema Architecture
 

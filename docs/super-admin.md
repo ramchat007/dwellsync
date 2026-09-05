@@ -2,7 +2,7 @@
 
 ## Super Admin Concept
 
-The **SUPER_ADMIN** is the platform owner of DwellSync. Unlike a Society Admin (who manages a single tenant), the Super Admin governs the SaaS infrastructure, society tenants, platform users, system diagnostics, and audit logs.
+The **SUPER_ADMIN** is the platform owner of DwellSyncHub. Unlike a Society Admin (who manages a single tenant), the Super Admin governs the SaaS infrastructure, society tenants, platform users, system diagnostics, and audit logs.
 
 ## Security Constraints
 
@@ -15,7 +15,7 @@ The **SUPER_ADMIN** is the platform owner of DwellSync. Unlike a Society Admin (
 ### Local Development Bootstrap:
 1. Configure `.env.local`:
    ```env
-   SUPER_ADMIN_EMAIL=superadmin@dwellsync.internal
+   SUPER_ADMIN_EMAIL=superadmin@DwellSyncHub.internal
    SUPER_ADMIN_PASSWORD=YourSecurePassword123!
    SUPER_ADMIN_NAME="Platform Super Admin"
    ```

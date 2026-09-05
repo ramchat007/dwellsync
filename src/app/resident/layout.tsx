@@ -36,7 +36,7 @@ export default async function ResidentLayout({
               </div>
               <div className="hidden sm:block">
                 <span className="text-base font-bold text-slate-900 dark:text-white tracking-tight">
-                  DwellSync
+                  DwellSyncHub
                 </span>
                 <span className="block text-[11px] text-slate-500 font-medium">
                   {society?.name || "Community Portal"}

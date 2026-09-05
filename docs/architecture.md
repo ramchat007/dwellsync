@@ -1,9 +1,9 @@
-# DwellSync — System Architecture
+# DwellSyncHub — System Architecture
 
 ## Product Philosophy
 "Every Rupee. Every Task. Every Decision. Accountable."
 
-DwellSync is a multi-tenant housing society operating system engineered with multi-layer boundaries across database, authorization, and UI presentation layers.
+DwellSyncHub is a multi-tenant housing society operating system engineered with multi-layer boundaries across database, authorization, and UI presentation layers.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐

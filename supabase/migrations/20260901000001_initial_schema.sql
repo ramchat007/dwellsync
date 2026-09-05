@@ -1,4 +1,4 @@
--- DwellSync Pre-Phase 0 Initial Schema Migration
+-- DwellSyncHub Pre-Phase 0 Initial Schema Migration
 -- Creates core tables, triggers, helper functions, and initial RBAC seed data
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";

@@ -110,7 +110,7 @@ describe("Phase 3: Centralized Persona Resolution & Smart Routing", () => {
         isImpersonating: false,
         currentRole: "SUPER_ADMIN",
         currentSociety: null,
-        effectiveUser: { id: "admin-1", email: "superadmin@dwellsync.internal" },
+        effectiveUser: { id: "admin-1", email: "superadmin@DwellSyncHub.internal" },
         permissions: [],
       };
 

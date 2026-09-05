@@ -30,7 +30,7 @@ describe("Phase 3 E2E Test Suite: Persona Routing, View-As & Access Control", ()
 
   const mockSuperAdmin = {
     id: "admin-platform-owner",
-    email: "superadmin@dwellsync.internal",
+    email: "superadmin@DwellSyncHub.internal",
     full_name: "Platform Super Admin",
   };
 

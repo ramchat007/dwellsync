@@ -2,7 +2,7 @@
 
 ## Overview
 
-DwellSync decouples user authentication from application profiles and multi-tenant authorization:
+DwellSyncHub decouples user authentication from application profiles and multi-tenant authorization:
 - **Authentication Provider**: Managed strictly by Supabase Auth (`auth.users`).
 - **Application Profile**: Stored in `public.profiles` keyed by `id UUID REFERENCES auth.users(id)`.
 - **Session Lifecycle**: Handled using `@supabase/ssr` with secure HTTP-only cookies and Next.js App Router middleware.

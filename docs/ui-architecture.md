@@ -1,4 +1,4 @@
-# DwellSync — UI Architecture & Design System
+# DwellSyncHub — UI Architecture & Design System
 
 ## Tech Stack
 - **Framework**: Next.js 15 App Router

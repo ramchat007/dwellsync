@@ -1,8 +1,8 @@
-# DwellSync — Row-Level Security (RLS) Policy Specification
+# DwellSyncHub — Row-Level Security (RLS) Policy Specification
 
 ## RLS Enforcement Model
 
-Every data table in DwellSync enforces PostgreSQL Row-Level Security (`ALTER TABLE ... ENABLE ROW LEVEL SECURITY;`).
+Every data table in DwellSyncHub enforces PostgreSQL Row-Level Security (`ALTER TABLE ... ENABLE ROW LEVEL SECURITY;`).
 
 ### Tenant Isolation Rules
 1. **Direct Society Scoping**:

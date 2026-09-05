@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import crypto from "crypto";
 
-export const AUTH_SESSION_COOKIE_NAME = "dwellsync_auth_session";
+export const AUTH_SESSION_COOKIE_NAME = "DwellSyncHub_auth_session";
 
 export interface SessionPayload {
   userId: string;
@@ -13,7 +13,7 @@ export interface SessionPayload {
 }
 
 const SESSION_SECRET =
-  process.env.SUPABASE_SERVICE_ROLE_KEY || "dwellsync-secure-session-secret-key-2026";
+  process.env.SUPABASE_SERVICE_ROLE_KEY || "DwellSyncHub-secure-session-secret-key-2026";
 
 /**
  * Creates a cryptographically HMAC-signed session token

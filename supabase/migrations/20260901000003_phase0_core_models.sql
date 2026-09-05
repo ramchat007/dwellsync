@@ -1,4 +1,4 @@
--- DwellSync Phase 0 Core Structural Models Migration
+-- DwellSyncHub Phase 0 Core Structural Models Migration
 -- Extends societies and creates buildings, wings, floors, units, and structural permissions
 
 -- 1. Extend Societies Table with Phase 0 fields

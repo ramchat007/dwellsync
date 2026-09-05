@@ -61,23 +61,18 @@ export function VendorDashboardClient({
         <div className="md:col-span-7 space-y-4">
           <Card className="border-slate-200 shadow-sm bg-white">
             <CardHeader className="pb-3 border-b border-slate-100">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-bold flex items-center gap-2">
-                  <Truck className="w-4 h-4 text-indigo-600" /> Vendor Service Orders
-                </CardTitle>
-                <Badge variant="purple" className="font-mono text-[9px]">
-                  COMING SOON
-                </Badge>
-              </div>
+              <CardTitle className="text-sm font-bold flex items-center gap-2">
+                <Truck className="w-4 h-4 text-indigo-600" /> Vendor Service Orders
+              </CardTitle>
               <CardDescription className="text-xs">
                 Contracts for lift maintenance, security, gardening, and housekeeping.
               </CardDescription>
             </CardHeader>
-            <CardContent className="pt-4 text-xs text-slate-500 text-center py-8">
+            <CardContent className="pt-6 pb-8 text-xs text-slate-500 text-center space-y-2">
               <FileText className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-              <div className="font-bold text-slate-800">No active work orders</div>
+              <div className="font-bold text-slate-800">No vendor activity yet.</div>
               <p className="text-[11px] text-slate-400 mt-1 max-w-xs mx-auto">
-                Vendor contract management module will be activated in upcoming financial release.
+                Vendor contract and service order features will appear here when configured.
               </p>
             </CardContent>
           </Card>
@@ -91,7 +86,7 @@ export function VendorDashboardClient({
               </CardTitle>
             </CardHeader>
             <CardContent className="text-xs text-slate-600 space-y-2">
-              <div>Society: <strong className="text-slate-900">{society?.name || "DwellSync Society"}</strong></div>
+              <div>Society: <strong className="text-slate-900">{society?.name || "DwellSyncHub Society"}</strong></div>
               <div>Treasurer / Office: <span className="font-mono">Clubhouse 1st Floor</span></div>
               <div className="pt-2 text-[11px] text-slate-400">
                 Submit GST invoices directly to the Hon. Treasurer during office hours.

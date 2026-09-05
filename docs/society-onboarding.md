@@ -1,8 +1,8 @@
-# DwellSync — Society Onboarding Architecture (Phase 1)
+# DwellSyncHub — Society Onboarding Architecture (Phase 1)
 
 ## Overview
 
-The Society Onboarding Workflow enables Super Admin platform owners to provision a complete, isolated multi-tenant housing society into DwellSync in a structured 7-step process.
+The Society Onboarding Workflow enables Super Admin platform owners to provision a complete, isolated multi-tenant housing society into DwellSyncHub in a structured 7-step process.
 
 ```
 Super Admin Control Center

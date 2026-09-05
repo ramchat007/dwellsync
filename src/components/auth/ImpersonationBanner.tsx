@@ -51,7 +51,7 @@ export function ImpersonationBanner() {
           </div>
           <div>
             <span className="font-medium text-amber-900">
-              Viewing DwellSync as <strong className="text-amber-950 font-bold underline decoration-amber-700">{userName}</strong>
+              Viewing DwellSyncHub as <strong className="text-amber-950 font-bold underline decoration-amber-700">{userName}</strong>
             </span>
             <span className="mx-2 text-amber-700">&bull;</span>
             <span className="text-amber-900">

@@ -1,4 +1,4 @@
-# DwellSync — Current State Inspection (Pre-Phase 0 Baseline)
+# DwellSyncHub — Current State Inspection (Pre-Phase 0 Baseline)
 
 ## Inspection Summary
 

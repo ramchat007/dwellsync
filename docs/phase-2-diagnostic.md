@@ -1,4 +1,4 @@
-# DwellSync — Phase 2 Diagnostic Report
+# DwellSyncHub — Phase 2 Diagnostic Report
 
 ## Environment & Dependency Overview
 

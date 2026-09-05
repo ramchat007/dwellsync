@@ -22,6 +22,7 @@ import {
   Mail,
   Phone,
   Settings,
+  Plus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -144,6 +145,12 @@ export function SocietyDetailClient({
         </div>
 
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <Link href={`/society/${currentSociety.id}/buildings`}>
+            <Button variant="outline" className="text-xs h-9 gap-1.5 border-indigo-200 text-indigo-700 hover:bg-indigo-50">
+              <Layers className="w-4 h-4" /> Manage Hierarchy
+            </Button>
+          </Link>
+
           {admins.length > 0 && (
             <Button
               onClick={handleImpersonateAdmin}
@@ -182,6 +189,28 @@ export function SocietyDetailClient({
           )}
         </div>
       </div>
+
+      {/* Onboarding In-Progress Banner */}
+      {currentSociety.status === "ONBOARDING" && (
+        <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-in fade-in-0">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 bg-amber-100 rounded-lg text-amber-700 shrink-0">
+              <Layers className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="font-bold text-xs">Onboarding In Progress: Physical Hierarchy Required</div>
+              <div className="text-[11px] text-amber-700">
+                Configure buildings, wings, floor plans, and residential units to complete onboarding and activate this society.
+              </div>
+            </div>
+          </div>
+          <Link href={`/society/${currentSociety.id}/buildings`}>
+            <Button size="sm" className="bg-amber-600 hover:bg-amber-700 text-white text-xs gap-1 font-semibold shrink-0">
+              Configure Hierarchy &rarr;
+            </Button>
+          </Link>
+        </div>
+      )}
 
       {/* Real Structural Metrics Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -311,8 +340,16 @@ export function SocietyDetailClient({
         {/* BUILDINGS TAB */}
         <TabsContent value="buildings">
           <Card>
-            <CardHeader className="pb-3 border-b border-slate-100">
-              <CardTitle className="text-sm font-bold">Buildings & Towers</CardTitle>
+            <CardHeader className="pb-3 border-b border-slate-100 flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-sm font-bold">Buildings & Towers</CardTitle>
+                <CardDescription className="text-xs">Physical towers and blocks registered for this society.</CardDescription>
+              </div>
+              <Link href={`/society/${currentSociety.id}/buildings`}>
+                <Button size="sm" variant="outline" className="text-xs h-8 gap-1.5 border-indigo-200 text-indigo-700 hover:bg-indigo-50">
+                  <Plus className="w-3.5 h-3.5" /> Add / Manage Hierarchy
+                </Button>
+              </Link>
             </CardHeader>
             <CardContent className="p-0">
               <Table>
@@ -358,8 +395,16 @@ export function SocietyDetailClient({
         {/* UNITS TAB */}
         <TabsContent value="units">
           <Card>
-            <CardHeader className="pb-3 border-b border-slate-100">
-              <CardTitle className="text-sm font-bold">Units & Flats</CardTitle>
+            <CardHeader className="pb-3 border-b border-slate-100 flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-sm font-bold">Units & Flats</CardTitle>
+                <CardDescription className="text-xs">Residential and commercial units across all buildings.</CardDescription>
+              </div>
+              <Link href={`/society/${currentSociety.id}/buildings`}>
+                <Button size="sm" variant="outline" className="text-xs h-8 gap-1.5 border-indigo-200 text-indigo-700 hover:bg-indigo-50">
+                  <Plus className="w-3.5 h-3.5" /> Add / Generate Units
+                </Button>
+              </Link>
             </CardHeader>
             <CardContent className="p-0">
               <Table>

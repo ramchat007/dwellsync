@@ -1,4 +1,4 @@
--- DwellSync Phase 5: Resident Core Migration
+-- DwellSyncHub Phase 5: Resident Core Migration
 -- Creates notices, society documents, and resident privacy settings with RLS
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";

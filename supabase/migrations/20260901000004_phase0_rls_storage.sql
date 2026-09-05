@@ -1,4 +1,4 @@
--- DwellSync Phase 0 Row Level Security & Storage Setup
+-- DwellSyncHub Phase 0 Row Level Security & Storage Setup
 
 -- 1. Enable RLS on physical structural hierarchy tables
 ALTER TABLE public.buildings ENABLE ROW LEVEL SECURITY;

@@ -31,7 +31,7 @@ export default async function SuperAdminAuditLogsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Platform Audit Trail"
-        description="Immutable forensic log of all administrative, impersonation, and structural transactions across DwellSync."
+        description="Immutable forensic log of all administrative, impersonation, and structural transactions across DwellSyncHub."
         badge={
           <Badge variant="purple" className="font-mono text-[10px]">
             SECURITY LEDGER

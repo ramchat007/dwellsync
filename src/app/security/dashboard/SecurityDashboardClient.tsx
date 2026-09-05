@@ -59,48 +59,23 @@ export function SecurityDashboardClient({
         </Link>
       </div>
 
-      {/* Gate Quick Action Buttons (Mobile-optimized grid) */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="p-4 rounded-xl border border-slate-200 bg-white text-center shadow-2xs space-y-2">
-          <div className="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto">
+      {/* Security Operations State */}
+      <Card className="border-slate-200 shadow-sm bg-white">
+        <CardHeader className="pb-2 border-b border-slate-100">
+          <CardTitle className="text-xs font-bold flex items-center gap-2 text-slate-900">
+            <ShieldAlert className="w-4 h-4 text-amber-600" /> Gate Checkpoint Operations
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-6 pb-8 text-center text-xs space-y-2">
+          <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-2">
             <ShieldCheck className="w-5 h-5" />
           </div>
-          <div className="font-bold text-xs text-slate-900">Visitor Check-In</div>
-          <Badge variant="purple" className="font-mono text-[9px]">
-            COMING SOON
-          </Badge>
-        </div>
-
-        <div className="p-4 rounded-xl border border-slate-200 bg-white text-center shadow-2xs space-y-2">
-          <div className="w-10 h-10 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mx-auto">
-            <Package className="w-5 h-5" />
-          </div>
-          <div className="font-bold text-xs text-slate-900">Delivery Pass</div>
-          <Badge variant="purple" className="font-mono text-[9px]">
-            COMING SOON
-          </Badge>
-        </div>
-
-        <div className="p-4 rounded-xl border border-slate-200 bg-white text-center shadow-2xs space-y-2">
-          <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto">
-            <Car className="w-5 h-5" />
-          </div>
-          <div className="font-bold text-xs text-slate-900">Vehicle Entry</div>
-          <Badge variant="purple" className="font-mono text-[9px]">
-            COMING SOON
-          </Badge>
-        </div>
-
-        <div className="p-4 rounded-xl border border-slate-200 bg-white text-center shadow-2xs space-y-2">
-          <div className="w-10 h-10 rounded-full bg-red-50 text-red-600 flex items-center justify-center mx-auto">
-            <AlertTriangle className="w-5 h-5" />
-          </div>
-          <div className="font-bold text-xs text-slate-900">Gate Alert</div>
-          <Badge variant="purple" className="font-mono text-[9px]">
-            COMING SOON
-          </Badge>
-        </div>
-      </div>
+          <div className="font-bold text-slate-800">No security activity yet.</div>
+          <p className="text-[11px] text-slate-400 max-w-xs mx-auto">
+            Visitor verification and gate logging features will appear here when configured.
+          </p>
+        </CardContent>
+      </Card>
 
       {/* Main Grid: Gate Roster & Gate Security Information */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6">

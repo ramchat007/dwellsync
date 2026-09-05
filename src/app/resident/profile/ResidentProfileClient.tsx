@@ -207,7 +207,7 @@ export function ResidentProfileClient({
           className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/30 dark:hover:bg-rose-950/60 text-rose-700 dark:text-rose-300 text-xs font-bold transition border border-rose-200 dark:border-rose-900/40"
         >
           <LogOut className="w-4 h-4" />
-          Sign Out of DwellSync
+          Sign Out of DwellSyncHub
         </button>
       </div>
     </div>

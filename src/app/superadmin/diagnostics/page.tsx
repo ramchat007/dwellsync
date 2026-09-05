@@ -21,7 +21,7 @@ export default function DiagnosticsPage() {
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm font-bold flex items-center gap-2 text-indigo-950">
               <Sparkles className="w-4 h-4 text-indigo-600" />
-              DwellSync CSS Test
+              DwellSyncHub CSS Test
             </CardTitle>
             <Badge variant="success" className="font-mono text-xs px-2.5 py-0.5 font-bold">
               Tailwind: WORKING

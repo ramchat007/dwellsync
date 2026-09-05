@@ -42,7 +42,7 @@ export default async function ResidentHomePage() {
 
     // 2. Fetch owned units
     const { data: ownerships } = await adminClient
-      .from("unit_ownerships")
+      .from("unit_owners")
       .select(`
         *,
         unit:units (

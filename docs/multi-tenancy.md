@@ -2,10 +2,10 @@
 
 ## Multi-Tenant Model
 
-DwellSync uses a **Single-Database, Shared Schema with Row-Level Security (RLS)** architecture.
+DwellSyncHub uses a **Single-Database, Shared Schema with Row-Level Security (RLS)** architecture.
 
 ```
-Platform (DwellSync)
+Platform (DwellSyncHub)
 ├── Society A (Tenant 1)
 │   ├── Units (A-101, A-102...)
 │   └── Members (Admin, Secretary, Residents...)

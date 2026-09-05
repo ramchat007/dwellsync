@@ -11,10 +11,10 @@ export default async function SocietyBuildingsPage({
   params: Promise<{ societyId: string }>;
 }) {
   const { societyId } = await params;
-  await requireSocietyAccess(societyId);
+  const { society } = await requireSocietyAccess(societyId);
 
   const buildings = await getBuildingsWithHierarchy(societyId);
 
-  return <BuildingHierarchyClient societyId={societyId} initialBuildings={buildings} />;
+  return <BuildingHierarchyClient societyId={societyId} initialBuildings={buildings} society={society} />;
 }
 

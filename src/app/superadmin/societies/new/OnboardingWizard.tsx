@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { SocietyType } from "@/lib/types/database";
@@ -18,6 +18,7 @@ import {
   Trash2,
   ArrowRight,
   Shield,
+  RotateCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,62 +46,86 @@ const STEPS = [
   { id: 6, label: "Review", icon: CheckCircle2 },
 ];
 
+const ONBOARDING_DRAFT_KEY = "dwellsync_onboarding_draft";
+
+const INITIAL_FORM_DATA = {
+  name: "",
+  code: "",
+  registration_number: "",
+  society_type: "COOPERATIVE_HOUSING" as SocietyType,
+  logo_url: null as string | null,
+  address_line_1: "",
+  address_line_2: "",
+  landmark: "",
+  city: "Mumbai",
+  district: "Mumbai Suburban",
+  state: "Maharashtra",
+  pincode: "",
+  country: "India",
+  contact_email: "",
+  contact_phone: "",
+  website: "",
+  timezone: "Asia/Kolkata",
+  currency: "INR",
+  towers: [{ name: "Tower A", code: "TWR-A", number_of_floors: 5, units_per_floor: 4 }],
+  admin_full_name: "",
+  admin_email: "",
+  admin_phone: "",
+  admin_password: "TestPassword@123",
+};
+
 export function OnboardingWizard() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [createdSocietyId, setCreatedSocietyId] = useState<string | null>(null);
+  const [isDraftRestored, setIsDraftRestored] = useState(false);
 
-  const [formData, setFormData] = useState<{
-    name: string;
-    code: string;
-    registration_number: string;
-    society_type: SocietyType;
-    logo_url: string | null;
-    address_line_1: string;
-    address_line_2: string;
-    landmark: string;
-    city: string;
-    district: string;
-    state: string;
-    pincode: string;
-    country: string;
-    contact_email: string;
-    contact_phone: string;
-    website: string;
-    timezone: string;
-    currency: string;
-    towers: { name: string; code: string; number_of_floors: number; units_per_floor: number }[];
-    admin_full_name: string;
-    admin_email: string;
-    admin_phone: string;
-    admin_password: string;
-  }>({
-    name: "",
-    code: "",
-    registration_number: "",
-    society_type: "COOPERATIVE_HOUSING",
-    logo_url: null,
-    address_line_1: "",
-    address_line_2: "",
-    landmark: "",
-    city: "Mumbai",
-    district: "Mumbai Suburban",
-    state: "Maharashtra",
-    pincode: "",
-    country: "India",
-    contact_email: "",
-    contact_phone: "",
-    website: "",
-    timezone: "Asia/Kolkata",
-    currency: "INR",
-    towers: [{ name: "Tower A", code: "TWR-A", number_of_floors: 5, units_per_floor: 4 }],
-    admin_full_name: "",
-    admin_email: "",
-    admin_phone: "",
-    admin_password: "TestPassword@123",
-  });
+  const [formData, setFormData] = useState(INITIAL_FORM_DATA);
+
+  // Restore saved onboarding draft from browser storage on reload
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(ONBOARDING_DRAFT_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.formData && typeof parsed.formData === "object") {
+          setFormData((prev) => ({ ...prev, ...parsed.formData }));
+          if (parsed.currentStep && parsed.currentStep >= 1 && parsed.currentStep <= 6) {
+            setCurrentStep(parsed.currentStep);
+          }
+          setIsDraftRestored(true);
+        }
+      }
+    } catch {
+      // Ignore storage read errors
+    }
+  }, []);
+
+  // Persist current onboarding state across browser refreshes
+  useEffect(() => {
+    if (currentStep < 7) {
+      try {
+        localStorage.setItem(
+          ONBOARDING_DRAFT_KEY,
+          JSON.stringify({ formData, currentStep })
+        );
+      } catch {
+        // Ignore storage write errors
+      }
+    }
+  }, [formData, currentStep]);
+
+  const handleResetDraft = () => {
+    try {
+      localStorage.removeItem(ONBOARDING_DRAFT_KEY);
+    } catch {}
+    setFormData(INITIAL_FORM_DATA);
+    setCurrentStep(1);
+    setIsDraftRestored(false);
+    setError(null);
+  };
 
   const handleAddTower = () => {
     const nextChar = String.fromCharCode(65 + formData.towers.length);
@@ -176,6 +201,9 @@ export function OnboardingWizard() {
 
       const data = await res.json();
       if (res.ok && data.success) {
+        try {
+          localStorage.removeItem(ONBOARDING_DRAFT_KEY);
+        } catch {}
         setCreatedSocietyId(data.society.id);
         setCurrentStep(7); // Final success screen
       } else {
@@ -192,19 +220,48 @@ export function OnboardingWizard() {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Wizard Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-slate-900">New Society Onboarding Wizard</h1>
           <p className="text-xs text-slate-500">
-            Guided 7-step provisioning of a new multi-tenant housing society into DwellSync.
+            Guided 7-step provisioning of a new multi-tenant housing society into DwellSyncHub.
           </p>
         </div>
-        <Link href="/superadmin/societies">
-          <Button variant="outline" size="sm" className="text-xs">
-            Back to Societies
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          {isDraftRestored && currentStep < 7 && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleResetDraft}
+              className="text-xs text-slate-600 hover:text-red-600 gap-1"
+            >
+              <RotateCcw className="w-3.5 h-3.5" /> Reset Draft
+            </Button>
+          )}
+          <Link href="/superadmin/societies">
+            <Button variant="outline" size="sm" className="text-xs">
+              Back to Societies
+            </Button>
+          </Link>
+        </div>
       </div>
+
+      {/* Persistent Draft Notice */}
+      {isDraftRestored && currentStep < 7 && (
+        <div className="p-2.5 rounded-lg bg-indigo-50/80 border border-indigo-200 text-indigo-900 text-xs flex items-center justify-between">
+          <span className="flex items-center gap-1.5">
+            <span className="font-semibold">Draft Restored:</span> Resumed at Step {currentStep} from previous session.
+          </span>
+          <button
+            type="button"
+            onClick={handleResetDraft}
+            className="underline hover:text-indigo-700 text-[11px] font-medium"
+          >
+            Start Fresh
+          </button>
+        </div>
+      )}
 
       {/* Progress Bar / Step Indicators */}
       {currentStep < 7 && (
@@ -264,7 +321,7 @@ export function OnboardingWizard() {
                 <Building2 className="w-5 h-5 text-indigo-600" /> Step 1: Basic Information
               </CardTitle>
               <CardDescription className="text-xs">
-                Legal identity, brand name, and unique code within DwellSync.
+                Legal identity, brand name, and unique code within DwellSyncHub.
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-5 space-y-4 text-xs">
@@ -681,9 +738,14 @@ export function OnboardingWizard() {
               </p>
             </div>
 
-            <div className="flex items-center justify-center gap-3 pt-4">
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-4">
+              <Link href={`/society/${createdSocietyId}/buildings`}>
+                <Button className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs gap-1.5 shadow">
+                  <Layers className="w-4 h-4" /> Configure Structural Hierarchy
+                </Button>
+              </Link>
               <Link href={`/superadmin/societies/${createdSocietyId}`}>
-                <Button className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs gap-1.5">
+                <Button variant="outline" className="text-xs gap-1.5 border-slate-300">
                   <Shield className="w-4 h-4" /> Open Society Management
                 </Button>
               </Link>

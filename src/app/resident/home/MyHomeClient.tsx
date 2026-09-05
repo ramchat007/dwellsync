@@ -32,8 +32,10 @@ interface MyHomeClientProps {
     };
     ownership?: {
       ownership_type: string;
-      share_percentage: number;
-      ownership_start_date: string;
+      ownership_percentage?: number;
+      share_percentage?: number;
+      start_date?: string;
+      ownership_start_date?: string;
     };
   })[];
 }
@@ -114,7 +116,7 @@ export function MyHomeClient({ profile, society, units }: MyHomeClientProps) {
                     {isOwner ? (
                       <span className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
                         <CheckCircle2 className="w-3.5 h-3.5" />
-                        Owner ({unit.ownership?.share_percentage || 100}%)
+                        Owner ({unit.ownership?.ownership_percentage ?? unit.ownership?.share_percentage ?? 100}%)
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-full bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300">

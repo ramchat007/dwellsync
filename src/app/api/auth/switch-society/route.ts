@@ -35,7 +35,7 @@ export async function POST(req: Request) {
     }
 
     const cookieStore = await cookies();
-    cookieStore.set("dwellsync_active_society", societyId, {
+    cookieStore.set("DwellSyncHub_active_society", societyId, {
       path: "/",
       httpOnly: false,
       sameSite: "lax",

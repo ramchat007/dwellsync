@@ -10,7 +10,7 @@ import { Profile, RoleId, Society, SocietyMembership } from "../types/database";
 
 export { roleHasPermission, getPermissionsForRole };
 
-export const ACTIVE_SOCIETY_COOKIE_NAME = "dwellsync_active_society";
+export const ACTIVE_SOCIETY_COOKIE_NAME = "DwellSyncHub_active_society";
 
 export async function getCurrentIdentity(): Promise<UserIdentity | null> {
   const supabase = await createServerSupabaseClient();
@@ -74,7 +74,7 @@ export async function getCurrentIdentity(): Promise<UserIdentity | null> {
   if (impersonationSession && impersonationSession.original_admin_id === resolvedUserId) {
     const targetProfile: Profile = impersonationSession.target_user || {
       id: impersonationSession.target_user_id,
-      email: "impersonated@dwellsync.internal",
+      email: "impersonated@DwellSyncHub.internal",
       full_name: "Impersonated User",
       display_name: "Impersonated User",
       avatar_url: null,

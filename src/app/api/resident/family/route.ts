@@ -31,7 +31,7 @@ export async function GET() {
         )
       `)
       .eq("society_id", societyId)
-      .eq("primary_resident_user_id", identity.effectiveUser.id)
+      .eq("primary_member_id", identity.effectiveUser.id)
       .order("created_at", { ascending: true });
 
     if (error) {
@@ -69,9 +69,33 @@ export async function POST(req: Request) {
 
     const adminClient = createAdminClient();
 
-    // If unit_id is not supplied, locate resident's first active unit
+    // If unit_id is supplied, verify caller owns or occupies it (anti-spoofing)
     let targetUnitId = unit_id;
-    if (!targetUnitId) {
+    if (targetUnitId) {
+      const { data: isOwner } = await adminClient
+        .from("unit_owners")
+        .select("id")
+        .eq("unit_id", targetUnitId)
+        .eq("user_id", identity.effectiveUser.id)
+        .eq("status", "ACTIVE")
+        .maybeSingle();
+
+      const { data: isOccupant } = await adminClient
+        .from("unit_occupancies")
+        .select("id")
+        .eq("unit_id", targetUnitId)
+        .eq("user_id", identity.effectiveUser.id)
+        .eq("status", "ACTIVE")
+        .maybeSingle();
+
+      if (!isOwner && !isOccupant && !identity.isSuperAdmin) {
+        return NextResponse.json(
+          { error: "Unauthorized: You do not own or occupy this unit." },
+          { status: 403 }
+        );
+      }
+    } else {
+      // Locate resident's first active unit
       const { data: occupancy } = await adminClient
         .from("unit_occupancies")
         .select("unit_id")
@@ -84,9 +108,8 @@ export async function POST(req: Request) {
       if (occupancy) {
         targetUnitId = occupancy.unit_id;
       } else {
-        // Check unit_ownerships
         const { data: ownership } = await adminClient
-          .from("unit_ownerships")
+          .from("unit_owners")
           .select("unit_id")
           .eq("user_id", identity.effectiveUser.id)
           .eq("society_id", societyId)
@@ -110,7 +133,7 @@ export async function POST(req: Request) {
       .insert({
         society_id: societyId,
         unit_id: targetUnitId,
-        primary_resident_user_id: identity.effectiveUser.id,
+        primary_member_id: identity.effectiveUser.id,
         full_name,
         relationship,
         phone: phone || null,
@@ -162,7 +185,7 @@ export async function DELETE(req: Request) {
       .from("family_members")
       .select("*")
       .eq("id", memberId)
-      .eq("primary_resident_user_id", identity.effectiveUser.id)
+      .eq("primary_member_id", identity.effectiveUser.id)
       .maybeSingle();
 
     if (!member && !identity.isSuperAdmin) {

@@ -322,7 +322,7 @@ export function FastLoginForm() {
         <CardHeader className="space-y-2 pb-5 border-b border-slate-800/80 text-center">
           <Link href="/" className="inline-flex items-center justify-center gap-2 text-indigo-400 mx-auto">
             <Building2 className="w-7 h-7" />
-            <span className="font-bold tracking-wider text-lg uppercase text-white">DwellSync</span>
+            <span className="font-bold tracking-wider text-lg uppercase text-white">DwellSyncHub</span>
           </Link>
           <CardTitle className="text-xl sm:text-2xl font-bold text-white pt-1">
             {step === "otp_verify"
@@ -333,7 +333,7 @@ export function FastLoginForm() {
               ? "Choose how you want to continue"
               : step === "unlinked_account"
               ? "Account Connected"
-              : "Welcome to DwellSync 👋"}
+              : "Welcome to DwellSyncHub 👋"}
           </CardTitle>
           <CardDescription className="text-slate-400 text-xs">
             {step === "otp_verify"
@@ -655,7 +655,7 @@ export function FastLoginForm() {
                 </label>
                 <Input
                   type="text"
-                  placeholder="user@dwellsync.internal"
+                  placeholder="user@DwellSyncHub.internal"
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
                   disabled={isLoading}
@@ -761,7 +761,7 @@ export function FastLoginForm() {
                   <div className="p-3 rounded-lg bg-amber-950/60 border border-amber-800 text-amber-200 text-[11px] flex items-start gap-2">
                     <HelpCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                     <span>
-                      Your DwellSync account is verified, but not yet linked to an active housing society.
+                      Your DwellSyncHub account is verified, but not yet linked to an active housing society.
                     </span>
                   </div>
 
@@ -809,7 +809,7 @@ export function FastLoginForm() {
         </CardContent>
 
         <CardFooter className="pt-0 border-t border-slate-800/80 mt-4 text-[11px] text-slate-500 justify-between">
-          <span>By continuing, you agree to DwellSync Terms</span>
+          <span>By continuing, you agree to DwellSyncHub Terms</span>
           <span className="font-mono text-slate-400">PostgreSQL RLS Protected</span>
         </CardFooter>
       </Card>

@@ -135,7 +135,7 @@ export function ViewAsConsoleClient({
           </div>
           <h1 className="text-2xl font-bold tracking-tight">Platform Access & Persona Testing</h1>
           <p className="text-xs text-slate-400 max-w-xl">
-            Logged in as <strong className="text-indigo-300 font-mono">{currentAdminEmail}</strong>. Select whether to access global platform administration or experience DwellSync through a real society persona.
+            Logged in as <strong className="text-indigo-300 font-mono">{currentAdminEmail}</strong>. Select whether to access global platform administration or experience DwellSyncHub through a real society persona.
           </p>
         </div>
 
@@ -227,17 +227,28 @@ export function ViewAsConsoleClient({
                   <Building2 className="w-4 h-4 text-indigo-600" />
                   <span>Target Housing Society *</span>
                 </label>
-                <Select
-                  value={selectedSocietyId}
-                  onChange={(e) => setSelectedSocietyId(e.target.value)}
-                  className="text-xs bg-slate-50 border-slate-300"
-                >
-                  {societies.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} ({s.code}) &middot; {s.city || "India"}
-                    </option>
-                  ))}
-                </Select>
+                {societies.length > 0 ? (
+                  <Select
+                    value={selectedSocietyId}
+                    onChange={(e) => setSelectedSocietyId(e.target.value)}
+                    className="text-xs bg-slate-50 border-slate-300"
+                  >
+                    {societies.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} ({s.code}) &middot; {s.city || "India"}
+                      </option>
+                    ))}
+                  </Select>
+                ) : (
+                  <div className="p-3.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-600 text-xs space-y-2">
+                    <div>No societies have been created yet. You must create a housing society before testing persona experiences.</div>
+                    <Link href="/superadmin/societies/new" className="inline-block">
+                      <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs gap-1">
+                        Create Society
+                      </Button>
+                    </Link>
+                  </div>
+                )}
               </div>
 
               {/* Exact User Dropdown */}
@@ -316,7 +327,7 @@ export function ViewAsConsoleClient({
                   ) : (
                     <>
                       <Sparkles className="w-4 h-4" />
-                      <span>Enter DwellSync as {currentPersonaDef?.title}</span>
+                      <span>Enter DwellSyncHub as {currentPersonaDef?.title}</span>
                       <ArrowRight className="w-4 h-4" />
                     </>
                   )}

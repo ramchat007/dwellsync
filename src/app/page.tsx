@@ -32,13 +32,13 @@ export default async function HomePage() {
         {/* Brand Pill */}
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-950/80 border border-indigo-700/50 text-indigo-300 text-xs font-semibold uppercase tracking-wider">
           <Building2 className="w-4 h-4 text-indigo-400" />
-          <span>Housing Society Operating System</span>
+          <span>The Digital Operating System for Residential Communities</span>
         </div>
 
         {/* Hero Title */}
         <div className="space-y-4">
           <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-200 to-slate-400">
-            DwellSync
+            DwellSyncHub
           </h1>
           <p className="text-lg sm:text-2xl text-slate-300 max-w-2xl mx-auto font-light leading-relaxed">
             &ldquo;Every Rupee. Every Task. Every Decision. Accountable.&rdquo;
@@ -83,15 +83,24 @@ export default async function HomePage() {
           </div>
         </div>
 
-        {/* CTA Button */}
+        {/* CTA Actions: Get Started & Sign In */}
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
           <Link href="/login">
             <Button
               size="lg"
               className="bg-indigo-600 hover:bg-indigo-500 text-white gap-2 text-sm sm:text-base px-8 h-12 shadow-lg shadow-indigo-600/30 font-semibold"
             >
-              <span>Sign In to DwellSync</span>
+              <span>Get Started</span>
               <ArrowRight className="w-4 h-4" />
+            </Button>
+          </Link>
+          <Link href="/login">
+            <Button
+              variant="outline"
+              size="lg"
+              className="border-slate-700 bg-slate-900/60 hover:bg-slate-800 text-slate-200 text-sm sm:text-base px-8 h-12 font-semibold"
+            >
+              <span>Sign In</span>
             </Button>
           </Link>
         </div>

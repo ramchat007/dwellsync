@@ -1,8 +1,8 @@
-# DwellSync — Multi-Owner & Joint Ownership Model (Phase 1)
+# DwellSyncHub — Multi-Owner & Joint Ownership Model (Phase 1)
 
 ## Overview
 
-In Indian housing societies, apartments and commercial units frequently have joint ownership (e.g. husband and wife, multiple partners, family shares). DwellSync decouples unit records from single-owner foreign keys into a dedicated `public.unit_owners` relationship table.
+In Indian housing societies, apartments and commercial units frequently have joint ownership (e.g. husband and wife, multiple partners, family shares). DwellSyncHub decouples unit records from single-owner foreign keys into a dedicated `public.unit_owners` relationship table.
 
 ## Data Model (`public.unit_owners`)
 

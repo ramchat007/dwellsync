@@ -83,7 +83,7 @@ export function FinanceDashboardClient({
             <div>
               <div className="text-slate-400 text-[11px]">Designated Society Account</div>
               <div className="text-sm font-bold text-slate-900 font-mono">
-                {society?.name || "Registered Bank"}
+                {society?.name || "Pending Bank Setup"}
               </div>
             </div>
           </CardContent>
@@ -92,17 +92,17 @@ export function FinanceDashboardClient({
         <Card className="border-slate-200 shadow-sm bg-white">
           <CardContent className="p-4 flex items-center gap-3 text-xs">
             <div className="p-2.5 rounded-xl bg-amber-50 text-amber-600">
-              <TrendingUp className="w-5 h-5" />
+              <Receipt className="w-5 h-5" />
             </div>
             <div>
               <div className="text-slate-400 text-[11px]">Financial Status</div>
-              <div className="text-sm font-bold text-emerald-600 font-mono">Compliant & Active</div>
+              <div className="text-sm font-bold text-slate-600 font-mono">Pending Setup</div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Main Grid: Management + Upcoming Finance Modules */}
+      {/* Main Grid: Management + Financial State */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
         {/* Left Column: Management Shortcuts */}
         <div className="md:col-span-6 space-y-4">
@@ -139,58 +139,28 @@ export function FinanceDashboardClient({
           </div>
         </div>
 
-        {/* Right Column: Financial Modules (Coming Soon) */}
+        {/* Right Column: Financial Modules Honest Empty State */}
         <div className="md:col-span-6 space-y-4">
           <div className="text-xs font-bold text-slate-700 uppercase tracking-wide">
-            Automated Accounting Modules
+            Financial Ledger & Operations
           </div>
 
-          <div className="space-y-2.5">
-            <div className="p-3.5 rounded-xl border border-slate-200 bg-white flex items-center justify-between shadow-2xs">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-emerald-50 text-emerald-600">
-                  <Receipt className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="font-bold text-xs text-slate-900">Maintenance Bill Generation</div>
-                  <div className="text-[11px] text-slate-500">Automated invoices & WhatsApp dispatch</div>
-                </div>
+          <Card className="border-slate-200 shadow-sm bg-white">
+            <CardHeader className="pb-2 border-b border-slate-100">
+              <CardTitle className="text-xs font-bold flex items-center gap-2 text-slate-900">
+                <Banknote className="w-4 h-4 text-emerald-600" /> Treasury Operations
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-6 pb-8 text-center text-xs space-y-2">
+              <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-2">
+                <FileSpreadsheet className="w-5 h-5" />
               </div>
-              <Badge variant="purple" className="font-mono text-[9px]">
-                COMING SOON
-              </Badge>
-            </div>
-
-            <div className="p-3.5 rounded-xl border border-slate-200 bg-white flex items-center justify-between shadow-2xs">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-indigo-50 text-indigo-600">
-                  <Banknote className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="font-bold text-xs text-slate-900">Vendor Expense Vouchers</div>
-                  <div className="text-[11px] text-slate-500">Dual-approval payout workflow</div>
-                </div>
-              </div>
-              <Badge variant="purple" className="font-mono text-[9px]">
-                COMING SOON
-              </Badge>
-            </div>
-
-            <div className="p-3.5 rounded-xl border border-slate-200 bg-white flex items-center justify-between shadow-2xs">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-cyan-50 text-cyan-600">
-                  <FileSpreadsheet className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="font-bold text-xs text-slate-900">Auditor Ledger & Balance Sheet</div>
-                  <div className="text-[11px] text-slate-500">Double-entry accounting reports</div>
-                </div>
-              </div>
-              <Badge variant="purple" className="font-mono text-[9px]">
-                COMING SOON
-              </Badge>
-            </div>
-          </div>
+              <div className="font-bold text-slate-800">No financial data available yet.</div>
+              <p className="text-[11px] text-slate-400 max-w-xs mx-auto">
+                Maintenance billings, collections, and expense vouchers will appear here when configured.
+              </p>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

@@ -1,5 +1,5 @@
 -- ==============================================================================
--- DWELLSYNC COMPLETE MASTER DATABASE SCHEMA & INITIALIZATION SCRIPT (PHASES 0–5)
+-- DwellSyncHub COMPLETE MASTER DATABASE SCHEMA & INITIALIZATION SCRIPT (PHASES 0–5)
 -- Run this entire script in your Supabase SQL Editor in ONE GO.
 -- It creates all tables, triggers, helper functions, roles, RLS policies, sample data,
 -- and initializes your Super Admin account (ramchat007@gmail.com / +919820160376).

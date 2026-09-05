@@ -1,7 +1,7 @@
-# DwellSync — Super Admin Account Setup & Architecture Guide
+# DwellSyncHub — Super Admin Account Setup & Architecture Guide
 
 ## Overview
-In DwellSync, **Super Admin is a private, database-driven platform persona**.
+In DwellSyncHub, **Super Admin is a private, database-driven platform persona**.
 Super Admin privileges are strictly derived from the PostgreSQL database (`public.platform_admins` table) and verified server-side. No email addresses or secrets are hardcoded in application logic.
 
 ---
@@ -74,9 +74,9 @@ npx tsx scripts/bootstrap-superadmin.ts your-email@example.com +919876543210
 ## 3. Server-Side Security & Verification
 
 Super Admin privileges are strictly checked on the server in:
-- `requireSuperAdmin()` ([`src/lib/auth/server.ts`](file:///c:/Rupesh/React%20Projects/DwellSync/src/lib/auth/server.ts))
-- `SuperAdminLayout` ([`src/app/superadmin/layout.tsx`](file:///c:/Rupesh/React%20Projects/DwellSync/src/app/superadmin/layout.tsx))
-- Next.js middleware ([`src/middleware.ts`](file:///c:/Rupesh/React%20Projects/DwellSync/src/middleware.ts))
+- `requireSuperAdmin()` ([`src/lib/auth/server.ts`](file:///c:/Rupesh/React%20Projects/DwellSyncHub/src/lib/auth/server.ts))
+- `SuperAdminLayout` ([`src/app/superadmin/layout.tsx`](file:///c:/Rupesh/React%20Projects/DwellSyncHub/src/app/superadmin/layout.tsx))
+- Next.js middleware ([`src/middleware.ts`](file:///c:/Rupesh/React%20Projects/DwellSyncHub/src/middleware.ts))
 
 Client-side tampering (`localStorage`, URL query parameters, hidden form fields) cannot escalate privileges because `getCurrentIdentity()` queries `public.platform_admins` on every request.
 
@@ -85,14 +85,14 @@ Client-side tampering (`localStorage`, URL query parameters, hidden form fields)
 ## 4. Super Admin Login & View-As Workflow
 
 1. **Sign In**: Go to `/login` and enter your mobile number or email.
-2. **Private Route**: Upon authentication, DwellSync detects your `SUPER_ADMIN` role and automatically redirects to the private console at `/superadmin/view-as`.
+2. **Private Route**: Upon authentication, DwellSyncHub detects your `SUPER_ADMIN` role and automatically redirects to the private console at `/superadmin/view-as`.
 3. **View-As Persona**:
    - Select target Role (e.g. `Resident`, `Treasurer`, `Secretary`, `Security`).
    - Select target Society (e.g. `Green Valley CHS`).
    - Select specific User.
    - Click **"Launch View-As Session"**.
 4. **Exit View**:
-   - The top banner displays `"Viewing DwellSync as [User] • Role: [Role] • Society: [Society] • [Exit View]"`.
+   - The top banner displays `"Viewing DwellSyncHub as [User] • Role: [Role] • Society: [Society] • [Exit View]"`.
    - Clicking **"Exit View"** terminates the session and returns to `/superadmin/view-as`.
 
 ---

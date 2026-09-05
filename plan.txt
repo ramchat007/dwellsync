@@ -28,3 +28,15 @@ And explain why:
 ⚠ 18 complaints breached SLA
 ⚠ ₹1.42L outstanding
 ✓ Fire certificates up to date
+
+
+Phase	    Name	                                           Main objective
+Phase 4	    Real Authentication & Society Onboarding           Auth → identity → society → hierarchy
+Phase 5	    Resident Identity & Unit Onboarding	               Residents, households, unit ownership/occupancy
+Phase 6	    Resident Portal Foundation	                       Resident dashboard and core resident experience
+Phase 7	    Security Gate & Visitor Management	               Security staff, visitors, vehicles, gate operations
+Phase 8	    Society Operations	                               Notices, complaints, amenities, meetings, documents
+Phase 9	    Maintenance & Billing	                           Maintenance charges, invoices, payments, receipts
+Phase 10	Communication & Notifications	                   Email, WhatsApp/SMS-ready architecture, push/in-app notifications
+Phase 11	Governance & Administration	                       Committee, roles, approvals, audit, governance workflows
+Phase 12	Analytics, Reporting & Production Hardening	       Reports, dashboards, performance, security, production readiness

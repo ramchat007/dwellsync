@@ -323,7 +323,7 @@ export function PeopleDirectoryClient({
             <Input
               type="email"
               required
-              placeholder="anand@dwellsync.internal"
+              placeholder="anand@DwellSyncHub.internal"
               value={addForm.email}
               onChange={(e) => setAddForm({ ...addForm, email: e.target.value })}
               className="text-xs"
@@ -376,7 +376,7 @@ export function PeopleDirectoryClient({
       {/* Invite Person Dialog */}
       <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
         <DialogHeader>
-          <DialogTitle>Invite Person to {societyId ? "Society" : "DwellSync"}</DialogTitle>
+          <DialogTitle>Invite Person to {societyId ? "Society" : "DwellSyncHub"}</DialogTitle>
           <DialogDescription>
             Generates a single-use invitation token with a 7-day expiration.
           </DialogDescription>

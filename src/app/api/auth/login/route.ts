@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { recordAuditLog } from "@/lib/auth/audit";
 import { getDashboardPathForRole } from "@/lib/auth/persona";
+import { setAuthSessionCookie } from "@/lib/auth/session";
 
 export async function POST(req: Request) {
   try {
@@ -33,6 +34,14 @@ export async function POST(req: Request) {
       .maybeSingle();
 
     const isSuperAdmin = !!platformAdmin;
+
+    // Establish Encrypted Auth Session Cookie for reliable SSR/refresh restoration
+    await setAuthSessionCookie({
+      userId: data.user.id,
+      email: data.user.email,
+      phone: data.user.phone,
+      isSuperAdmin,
+    });
 
     const { data: membership } = await adminClient
       .from("society_memberships")

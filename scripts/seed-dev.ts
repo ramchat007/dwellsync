@@ -20,7 +20,7 @@ const PERSONAS: {
   isSuperAdmin?: boolean;
 }[] = [
   {
-    email: "superadmin@dwellsync.internal",
+    email: "superadmin@DwellSyncHub.internal",
     fullName: "Rupesh Mestry (Platform Super Admin)",
     role: "SUPER_ADMIN",
     isSuperAdmin: true,
@@ -99,7 +99,7 @@ async function seedDevEnvironment() {
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   console.log("==================================================");
-  console.log("DwellSync Phase 1 — Multi-Tenant Seed Generator");
+  console.log("DwellSyncHub Phase 1 — Multi-Tenant Seed Generator");
   console.log("==================================================");
 
   if (!supabaseUrl || !serviceKey) {

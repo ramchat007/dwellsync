@@ -53,7 +53,7 @@ export async function createSocietyOnboarding(
       website: data.website || null,
       timezone: data.timezone,
       currency: data.currency,
-      status: "ACTIVE",
+      status: data.status || "ONBOARDING",
       created_by: actorUserId || null,
       updated_by: actorUserId || null,
     })

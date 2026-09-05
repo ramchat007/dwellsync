@@ -1,4 +1,4 @@
-# DwellSync — Phase 0–4 Comprehensive Acceptance Report
+# DwellSyncHub — Phase 0–4 Comprehensive Acceptance Report
 
 **Date**: 2026-09-01  
 **Status**: **ALL ACCEPTANCE TESTS PASSED (100%)**  
@@ -53,7 +53,7 @@
 - **Phone Normalization**: Canonical E.164 normalization (`+919876543210`) with display formatting.
 - **Mobile 6-Digit OTP UI**: Auto-advancing inputs, backspace jumping, paste support, 30s resend timer.
 - **Provider Abstraction**: Pluggable `AuthService` with `MobileOtpProvider`, `EmailOtpProvider`, `GoogleAuthProvider`, `WhatsAppAuthProvider`.
-- **Session Management**: HMAC-signed secure HttpOnly cookies (`dwellsync_auth_session`).
+- **Session Management**: HMAC-signed secure HttpOnly cookies (`DwellSyncHub_auth_session`).
 
 ---
 

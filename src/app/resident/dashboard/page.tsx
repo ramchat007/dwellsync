@@ -67,6 +67,18 @@ export default async function ResidentDashboardPage() {
     }
   }
 
+  let notices: any[] = [];
+  if (identity.currentSociety) {
+    const { data: nData } = await adminClient
+      .from("notices")
+      .select("*")
+      .eq("society_id", identity.currentSociety.id)
+      .eq("status", "PUBLISHED")
+      .order("published_at", { ascending: false })
+      .limit(3);
+    notices = nData || [];
+  }
+
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
       <ResidentDashboardClient
@@ -74,6 +86,7 @@ export default async function ResidentDashboardPage() {
         society={identity.currentSociety}
         role={identity.currentRole || "RESIDENT"}
         units={userUnits}
+        notices={notices}
       />
     </div>
   );

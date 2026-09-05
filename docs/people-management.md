@@ -1,4 +1,4 @@
-# DwellSync — People & Directory Management (Phase 1)
+# DwellSyncHub — People & Directory Management (Phase 1)
 
 ## Overview
 

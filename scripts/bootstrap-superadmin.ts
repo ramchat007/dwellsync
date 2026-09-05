@@ -14,7 +14,7 @@ async function bootstrapSuperAdmin() {
   const fullName = process.env.SUPER_ADMIN_NAME || "Platform Super Admin";
 
   console.log("==================================================");
-  console.log("DwellSync — Super Admin Promotion & Bootstrap");
+  console.log("DwellSyncHub — Super Admin Promotion & Bootstrap");
   console.log("==================================================");
 
   if (!supabaseUrl || !serviceKey) {
@@ -63,7 +63,7 @@ async function bootstrapSuperAdmin() {
       // Create user record in auth
       console.log(`Creating user in Supabase Auth...`);
       const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
-        email: email || `${phone?.replace("+", "")}@dwellsync.user`,
+        email: email || `${phone?.replace("+", "")}@DwellSyncHub.user`,
         phone: phone || undefined,
         email_confirm: true,
         phone_confirm: true,

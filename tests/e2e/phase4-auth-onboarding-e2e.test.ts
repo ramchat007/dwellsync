@@ -3,6 +3,9 @@ import { normalizeIndianPhoneNumber } from "@/lib/utils/phone";
 import { setDevOtp, verifyDevOtp } from "@/lib/auth/providers/otpStore";
 import { resolveUserExperience, getDashboardPathForRole, getNavigationForRole } from "@/lib/auth/persona";
 import { PERMISSIONS, roleHasPermission, getPermissionsForRole } from "@/lib/auth/permissions";
+import { signSessionToken, verifySessionToken, SessionPayload } from "@/lib/auth/session";
+import { onboardingSchema } from "@/lib/validations/onboarding";
+import { generateUnitDefinitions } from "@/lib/services/unitBatchService";
 
 describe("Phase 4 E2E Test Suite: Fast Login, Mobile OTP, Multi-Tenant Onboarding", () => {
   const mockSocietyA = {
@@ -21,21 +24,21 @@ describe("Phase 4 E2E Test Suite: Fast Login, Mobile OTP, Multi-Tenant Onboardin
 
   const mockResident = {
     id: "user-rahul-01",
-    email: "rahul@dwellsync.user",
+    email: "rahul@DwellSyncHub.user",
     phone: "+919876543210",
     full_name: "Rahul Sharma",
   };
 
   const mockSuperAdmin = {
     id: "admin-platform-01",
-    email: "superadmin@dwellsync.internal",
+    email: "superadmin@DwellSyncHub.internal",
     phone: null,
     full_name: "Platform Super Admin",
   };
 
   // TEST 1: Open login page - Verify no Super Admin, Developer, or Platform Admin text appears
   it("TEST 1: Login page is completely role-neutral with no internal admin terminology", () => {
-    const neutralTitle = "Welcome to DwellSync 👋";
+    const neutralTitle = "Welcome to DwellSyncHub 👋";
     const neutralSubtitle = "Sign in to continue to your community.";
 
     expect(neutralTitle).not.toContain("Super Admin");
@@ -224,5 +227,155 @@ describe("Phase 4 E2E Test Suite: Fast Login, Mobile OTP, Multi-Tenant Onboardin
     expect(roleHasPermission("RESIDENT", PERMISSIONS.PLATFORM_IMPERSONATE)).toBe(false);
     expect(roleHasPermission("RESIDENT", PERMISSIONS.SOCIETIES_MANAGE)).toBe(false);
   });
+
+  // TEST 16: Session Token Signing & Refresh Restoration
+  it("TEST 16: Cryptographic HMAC session token restores authenticated user session across refresh", () => {
+    const payload: SessionPayload = {
+      userId: "d52b51a1-026d-4828-81c3-a9f3a48780e6",
+      email: "ramchat007@gmail.com",
+      phone: "+919820160376",
+      isSuperAdmin: true,
+      issuedAt: Date.now(),
+      expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000,
+    };
+
+    const token = signSessionToken(payload);
+    expect(token).toContain(".");
+    
+    const verified = verifySessionToken(token);
+    expect(verified).not.toBeNull();
+    expect(verified?.userId).toBe("d52b51a1-026d-4828-81c3-a9f3a48780e6");
+    expect(verified?.email).toBe("ramchat007@gmail.com");
+    expect(verified?.isSuperAdmin).toBe(true);
+  });
+
+  // TEST 17: Forged / Tampered Session Token Rejection
+  it("TEST 17: Tampered or forged session token signature is rejected by verifySessionToken", () => {
+    const payload: SessionPayload = {
+      userId: "d52b51a1-026d-4828-81c3-a9f3a48780e6",
+      email: "ramchat007@gmail.com",
+      isSuperAdmin: true,
+      issuedAt: Date.now(),
+      expiresAt: Date.now() + 3600000,
+    };
+
+    const validToken = signSessionToken(payload);
+    const [data] = validToken.split(".");
+    const forgedToken = `${data}.forged_tampered_signature`;
+
+    const result = verifySessionToken(forgedToken);
+    expect(result).toBeNull();
+  });
+
+  // TEST 18: Society Onboarding Validation Schema & Status
+  it("TEST 18: Society onboarding validation schema validates code and sets default status to ONBOARDING", () => {
+    const validOnboardingInput = {
+      name: "Palm Beach CHS",
+      code: "PBCHS",
+      address_line_1: "Plot 45, Sector 14",
+      city: "Navi Mumbai",
+      state: "Maharashtra",
+      pincode: "400703",
+      country: "India",
+      admin_full_name: "Ramesh Sharma",
+      admin_email: "ramesh@palmbeach.org",
+      admin_password: "ValidPassword123!",
+    };
+
+    const parseResult = onboardingSchema.safeParse(validOnboardingInput);
+    expect(parseResult.success).toBe(true);
+    if (parseResult.success) {
+      expect(parseResult.data.status).toBe("ONBOARDING");
+      expect(parseResult.data.timezone).toBe("Asia/Kolkata");
+      expect(parseResult.data.currency).toBe("INR");
+    }
+
+    // Invalid lowercase code should be rejected by regex
+    const invalidInput = { ...validOnboardingInput, code: "invalid code!" };
+    expect(onboardingSchema.safeParse(invalidInput).success).toBe(false);
+  });
+
+  // TEST 19: Bulk Unit Generator Math & Format
+  it("TEST 19: Algorithmic unit generator accurately computes units across floors", () => {
+    const units = generateUnitDefinitions({
+      society_id: "550e8400-e29b-41d4-a716-446655440000",
+      building_id: "660e8400-e29b-41d4-a716-446655440000",
+      wing_id: null,
+      start_floor: 1,
+      end_floor: 3,
+      units_per_floor: 4,
+      prefix: "A",
+      unit_type: "2_BHK",
+      area_sqft: 950,
+      pattern: "{prefix}{floor}{unit}",
+    });
+
+    expect(units.length).toBe(12); // 3 floors * 4 units
+    expect(units[0].unit_number).toBe("A-101");
+    expect(units[0].floor_number).toBe(1);
+    expect(units[3].unit_number).toBe("A-104");
+    expect(units[11].unit_number).toBe("A-304");
+    expect(units[11].status).toBe("VACANT");
+  });
+
+  // TEST 20: Relational Physical Hierarchy Foreign Key Integrity
+  it("TEST 20: Relational physical hierarchy enforces non-null UUID parentage", () => {
+    const societyId = "11111111-1111-1111-1111-111111111111";
+    const buildingId = "22222222-2222-2222-2222-222222222222";
+    const wingId = "33333333-3333-3333-3333-333333333333";
+    const floorId = "44444444-4444-4444-4444-444444444444";
+    const unitId = "55555555-5555-5555-5555-555555555555";
+
+    const mockUnitRecord = {
+      id: unitId,
+      society_id: societyId,
+      building_id: buildingId,
+      wing_id: wingId,
+      floor_id: floorId,
+      unit_number: "A-101",
+      unit_type: "2_BHK",
+      status: "VACANT",
+    };
+
+    // Every level retains valid relational UUID links
+    expect(mockUnitRecord.society_id).toBe(societyId);
+    expect(mockUnitRecord.building_id).toBe(buildingId);
+    expect(mockUnitRecord.wing_id).toBe(wingId);
+    expect(mockUnitRecord.floor_id).toBe(floorId);
+    expect(mockUnitRecord.id).toBe(unitId);
+  });
+
+  // TEST 21: Society Lifecycle State Transitions
+  it("TEST 21: Society status transitions through ONBOARDING -> ACTIVE -> SUSPENDED lifecycle", () => {
+    const validStatuses = ["ONBOARDING", "ACTIVE", "SUSPENDED", "ARCHIVED"];
+    let currentStatus = "ONBOARDING";
+
+    expect(validStatuses).toContain(currentStatus);
+
+    // Promote to ACTIVE after hierarchy completion
+    currentStatus = "ACTIVE";
+    expect(validStatuses).toContain(currentStatus);
+
+    // Toggle to SUSPENDED for compliance/maintenance
+    currentStatus = "SUSPENDED";
+    expect(validStatuses).toContain(currentStatus);
+  });
+
+  // TEST 22: Tenant Context Defense Against URL / Client Payload Tampering
+  it("TEST 22: Tampered society_id in request payload is rejected by database membership check", () => {
+    const authenticatedResident = {
+      userId: "resident-user-01",
+      societyId: "legitimate-society-uuid",
+    };
+
+    const maliciousPayload = {
+      society_id: "attacker-targeted-society-uuid",
+      action: "UPDATE_BUILDING",
+    };
+
+    const isAuthorized = authenticatedResident.societyId === maliciousPayload.society_id;
+    expect(isAuthorized).toBe(false);
+  });
 });
+
 

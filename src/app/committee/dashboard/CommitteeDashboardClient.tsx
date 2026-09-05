@@ -165,58 +165,28 @@ export function CommitteeDashboardClient({
           </div>
         </div>
 
-        {/* Right Column: Governance Modules (Coming Soon) */}
+        {/* Right Column: Governance Modules */}
         <div className="md:col-span-5 space-y-4">
           <div className="text-xs font-bold text-slate-700 uppercase tracking-wide">
-            Managing Committee Modules
+            Governance Activity
           </div>
 
-          <div className="space-y-2.5">
-            <div className="p-3.5 rounded-xl border border-slate-200 bg-white flex items-center justify-between shadow-2xs">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-indigo-50 text-indigo-600">
-                  <Calendar className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="font-bold text-xs text-slate-900">Committee Meetings & AGM</div>
-                  <div className="text-[11px] text-slate-500">Agendas, notices & attendance</div>
-                </div>
+          <Card className="border-slate-200 shadow-sm bg-white">
+            <CardHeader className="pb-2 border-b border-slate-100">
+              <CardTitle className="text-xs font-bold flex items-center gap-2 text-slate-900">
+                <Shield className="w-4 h-4 text-indigo-600" /> Managing Committee Oversight
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-6 pb-8 text-center text-xs space-y-2">
+              <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-2">
+                <FileText className="w-5 h-5" />
               </div>
-              <Badge variant="purple" className="font-mono text-[9px]">
-                COMING SOON
-              </Badge>
-            </div>
-
-            <div className="p-3.5 rounded-xl border border-slate-200 bg-white flex items-center justify-between shadow-2xs">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-emerald-50 text-emerald-600">
-                  <FileText className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="font-bold text-xs text-slate-900">Resolution Ledger</div>
-                  <div className="text-[11px] text-slate-500">Official minutes & committee votes</div>
-                </div>
-              </div>
-              <Badge variant="purple" className="font-mono text-[9px]">
-                COMING SOON
-              </Badge>
-            </div>
-
-            <div className="p-3.5 rounded-xl border border-slate-200 bg-white flex items-center justify-between shadow-2xs">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-amber-50 text-amber-600">
-                  <Vote className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="font-bold text-xs text-slate-900">Digital Voting & Polls</div>
-                  <div className="text-[11px] text-slate-500">Society-wide resolutions</div>
-                </div>
-              </div>
-              <Badge variant="purple" className="font-mono text-[9px]">
-                COMING SOON
-              </Badge>
-            </div>
-          </div>
+              <div className="font-bold text-slate-800">No governance activity yet.</div>
+              <p className="text-[11px] text-slate-400 max-w-xs mx-auto">
+                Governance features will appear here when configured.
+              </p>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

@@ -32,7 +32,7 @@ API /api/auth/impersonate/start
   ├─ Verify Super Admin in public.platform_admins
   ├─ Verify Anti-Chaining (No active session)
   ├─ Insert row into public.impersonation_sessions
-  ├─ Set HttpOnly Cookie (dwellsync_impersonation_token)
+  ├─ Set HttpOnly Cookie (DwellSyncHub_impersonation_token)
   ├─ Record Audit Log (IMPERSONATION_STARTED)
   ▼
 Redirect to /society/[societyId]/dashboard

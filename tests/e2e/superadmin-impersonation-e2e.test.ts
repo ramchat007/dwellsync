@@ -5,7 +5,7 @@ describe("Phase 0 End-to-End Workflow: Super Admin Platform, Impersonation & Sec
   // Mock State Model
   let superAdminUser = {
     id: "admin-uuid-001",
-    email: "superadmin@dwellsync.internal",
+    email: "superadmin@DwellSyncHub.internal",
     role: "SUPER_ADMIN",
   };
 
@@ -26,7 +26,7 @@ describe("Phase 0 End-to-End Workflow: Super Admin Platform, Impersonation & Sec
 
   // Step 1 & 2: Super Admin Login & Dashboard access
   it("Step 1 & 2: Super Admin authenticates and accesses Super Admin platform", () => {
-    expect(superAdminUser.email).toBe("superadmin@dwellsync.internal");
+    expect(superAdminUser.email).toBe("superadmin@DwellSyncHub.internal");
     expect(superAdminUser.role).toBe("SUPER_ADMIN");
     const perms = getPermissionsForRole("SUPER_ADMIN");
     expect(perms).toContain(PERMISSIONS.PLATFORM_ADMIN);

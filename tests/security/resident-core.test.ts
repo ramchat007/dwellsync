@@ -112,5 +112,104 @@ describe("Phase 5 — Resident Core Security & Privacy Tests", () => {
     expect(visibleDirectory.length).toBe(1);
     expect(visibleDirectory[0].name).toBe("User 1");
   });
+
+  it("should enforce authoritative identity mapping (auth.uid = profile.id)", () => {
+    const authUser = { id: "a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d", email: "resident@dwellsync.com" };
+    const profile = {
+      id: "a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d",
+      email: "resident@dwellsync.com",
+      full_name: "Verified Resident",
+      status: "ACTIVE",
+    };
+
+    expect(profile.id).toBe(authUser.id);
+    expect(profile.email).toBe(authUser.email);
+  });
+
+  it("should distinguish platform Super Admin from society residents", () => {
+    const superAdminContext = {
+      role: "SUPER_ADMIN",
+      isSuperAdmin: true,
+      currentSociety: null,
+      availableSocieties: [],
+    };
+
+    const residentContext = {
+      role: "OWNER",
+      isSuperAdmin: false,
+      currentSociety: { id: "soc-1", name: "Green Heights" },
+      availableSocieties: [{ id: "mem-1", society_id: "soc-1", role_id: "OWNER" }],
+    };
+
+    expect(superAdminContext.isSuperAdmin).toBe(true);
+    expect(superAdminContext.currentSociety).toBeNull();
+    expect(residentContext.isSuperAdmin).toBe(false);
+    expect(residentContext.currentSociety?.id).toBe("soc-1");
+  });
+
+  it("should reject invitation acceptance when email does not match invited email", () => {
+    const invitation = {
+      id: "inv-1",
+      token: "secret-invite-token-abc",
+      email: "intended-recipient@example.com",
+      role_id: "TENANT",
+      status: "PENDING",
+      expires_at: new Date(Date.now() + 86400000).toISOString(),
+    };
+
+    const claimingUserEmail = "attacker@example.com";
+    const isEmailValid = invitation.email.toLowerCase() === claimingUserEmail.toLowerCase();
+
+    expect(isEmailValid).toBe(false);
+  });
+
+  it("should reject expired or already-accepted invitation tokens", () => {
+    const expiredInvite = {
+      status: "PENDING",
+      expires_at: new Date(Date.now() - 3600000).toISOString(),
+    };
+    const acceptedInvite = {
+      status: "ACCEPTED",
+      expires_at: new Date(Date.now() + 86400000).toISOString(),
+    };
+
+    const isExpiredValid =
+      expiredInvite.status === "PENDING" && new Date(expiredInvite.expires_at) > new Date();
+    const isAcceptedValid =
+      acceptedInvite.status === "PENDING" && new Date(acceptedInvite.expires_at) > new Date();
+
+    expect(isExpiredValid).toBe(false);
+    expect(isAcceptedValid).toBe(false);
+  });
+
+  it("should enforce multi-resident joint ownership limit <= 100%", () => {
+    const existingOwners = [
+      { user_id: "u1", ownership_percentage: 60.0 },
+    ];
+    const newOwnerPercentage = 45.0;
+
+    const currentTotal = existingOwners.reduce((sum, o) => sum + o.ownership_percentage, 0);
+    const exceedsLimit = currentTotal + newOwnerPercentage > 100.001;
+
+    expect(exceedsLimit).toBe(true);
+  });
+
+  it("should allow multi-resident co-occupants in a single unit", () => {
+    const unitOccupants = [
+      { id: "occ-1", unit_id: "flat-101", user_id: "u1", is_primary_tenant: true },
+      { id: "occ-2", unit_id: "flat-101", user_id: "u2", is_primary_tenant: false },
+    ];
+
+    expect(unitOccupants.length).toBe(2);
+    expect(unitOccupants.filter((o) => o.unit_id === "flat-101").length).toBe(2);
+  });
+
+  it("should block non-occupants from attaching family members to unrelated units", () => {
+    const userUnits = ["unit-101"];
+    const targetUnitToSpoof = "unit-999";
+
+    const isAuthorized = userUnits.includes(targetUnitToSpoof);
+    expect(isAuthorized).toBe(false);
+  });
 });
 

@@ -63,23 +63,18 @@ export function StaffDashboardClient({
         <div className="md:col-span-7 space-y-4">
           <Card className="border-slate-200 shadow-sm bg-white">
             <CardHeader className="pb-3 border-b border-slate-100">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-bold flex items-center gap-2">
-                  <ClipboardList className="w-4 h-4 text-indigo-600" /> Assigned Work Orders
-                </CardTitle>
-                <Badge variant="purple" className="font-mono text-[9px]">
-                  COMING SOON
-                </Badge>
-              </div>
+              <CardTitle className="text-sm font-bold flex items-center gap-2">
+                <ClipboardList className="w-4 h-4 text-indigo-600" /> Operations & Tasks
+              </CardTitle>
               <CardDescription className="text-xs">
                 Maintenance tickets dispatched by society residents or facility manager.
               </CardDescription>
             </CardHeader>
-            <CardContent className="pt-4 text-xs text-slate-500 text-center py-8">
+            <CardContent className="pt-6 pb-8 text-xs text-slate-500 text-center space-y-2">
               <Wrench className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-              <div className="font-bold text-slate-800">No active work orders</div>
+              <div className="font-bold text-slate-800">No work activity yet.</div>
               <p className="text-[11px] text-slate-400 mt-1 max-w-xs mx-auto">
-                Ticketing workflow module will be activated in upcoming maintenance release.
+                Operations and maintenance workflows will appear here when configured.
               </p>
             </CardContent>
           </Card>

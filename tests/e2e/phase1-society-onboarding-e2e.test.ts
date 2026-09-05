@@ -6,7 +6,7 @@ describe("Phase 1 Full 18-Step End-to-End Workflow: Society Onboarding, Multi-Ow
   // State variables across the 18 steps
   let superAdmin = {
     id: "superadmin-uuid-001",
-    email: "superadmin@dwellsync.internal",
+    email: "superadmin@DwellSyncHub.internal",
     role: "SUPER_ADMIN",
   };
 

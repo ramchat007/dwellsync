@@ -219,10 +219,25 @@ export function SocietyClient({ initialSocieties }: { initialSocieties: Society[
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={6} className="py-12 text-center text-slate-400 text-xs">
-                  {searchQuery || statusFilter !== "ALL"
-                    ? "No matching societies found."
-                    : "No societies created yet."}
+                <TableCell colSpan={6} className="py-14 text-center text-xs">
+                  {searchQuery || statusFilter !== "ALL" ? (
+                    <div className="text-slate-400 py-6">No matching societies found.</div>
+                  ) : (
+                    <div className="max-w-sm mx-auto space-y-3">
+                      <div className="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto">
+                        <Building2 className="w-5 h-5" />
+                      </div>
+                      <div className="font-bold text-slate-800 text-sm">No societies have been created yet.</div>
+                      <p className="text-slate-500 text-xs">
+                        Get started by creating your first housing society tenant on the platform.
+                      </p>
+                      <Link href="/superadmin/societies/new" className="inline-block pt-1">
+                        <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs gap-1.5 font-semibold">
+                          <Plus className="w-3.5 h-3.5" /> Create Society
+                        </Button>
+                      </Link>
+                    </div>
+                  )}
                 </TableCell>
               </TableRow>
             )}

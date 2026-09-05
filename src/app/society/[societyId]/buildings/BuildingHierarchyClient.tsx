@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { BuildingWithHierarchy } from "@/lib/services/buildingService";
-import { Building, Wing, Floor, Unit, UnitType, UnitStatus } from "@/lib/types/database";
+import { Building, Wing, Floor, Unit, UnitType, UnitStatus, Society } from "@/lib/types/database";
 import {
   Building2,
   Layers,
@@ -47,15 +47,23 @@ const UNIT_STATUSES: UnitStatus[] = [
 export function BuildingHierarchyClient({
   societyId,
   initialBuildings,
+  society,
 }: {
   societyId: string;
   initialBuildings: BuildingWithHierarchy[];
+  society?: Society;
 }) {
   const router = useRouter();
   const [buildings, setBuildings] = useState<BuildingWithHierarchy[]>(initialBuildings);
   const [expandedBuildingId, setExpandedBuildingId] = useState<string | null>(
     initialBuildings[0]?.id || null
   );
+  const [isCompletingOnboarding, setIsCompletingOnboarding] = useState(false);
+
+  // Sync state when initialBuildings prop updates from router.refresh()
+  useEffect(() => {
+    setBuildings(initialBuildings);
+  }, [initialBuildings]);
 
   // Modals
   const [isAddBuildingOpen, setIsAddBuildingOpen] = useState(false);
@@ -225,6 +233,28 @@ export function BuildingHierarchyClient({
     }
   };
 
+  const handleCompleteOnboarding = async () => {
+    try {
+      setIsCompletingOnboarding(true);
+      const res = await fetch(`/api/superadmin/societies/${societyId}/status`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "ACTIVE" }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        router.push(`/superadmin/societies/${societyId}`);
+      } else {
+        alert(data.error || "Failed to activate society");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error completing onboarding");
+    } finally {
+      setIsCompletingOnboarding(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -254,6 +284,36 @@ export function BuildingHierarchyClient({
           </Button>
         </div>
       </div>
+
+      {/* Onboarding Stage Physical Hierarchy Banner */}
+      {society?.status === "ONBOARDING" && (
+        <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs animate-in fade-in-0">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-amber-100 rounded-lg text-amber-700 shrink-0">
+              <Layers className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="font-bold text-xs">Onboarding Step: Physical Hierarchy Configuration</div>
+              <p className="text-[11px] text-amber-700">
+                Create buildings, wings, floors, and residential units for <strong>{society.name}</strong>. Once configured, click Complete to promote this society to ACTIVE.
+              </p>
+            </div>
+          </div>
+
+          <Button
+            onClick={handleCompleteOnboarding}
+            disabled={isCompletingOnboarding}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5 font-semibold shrink-0 shadow"
+          >
+            {isCompletingOnboarding ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <CheckCircle2 className="w-3.5 h-3.5" />
+            )}
+            Complete Onboarding & Activate
+          </Button>
+        </div>
+      )}
 
       {buildings.length > 0 ? (
         <div className="space-y-4">

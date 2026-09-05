@@ -30,12 +30,12 @@ export default async function ResidentFamilyPage() {
         )
       `)
       .eq("society_id", societyId)
-      .eq("primary_resident_user_id", identity.effectiveUser.id)
+      .eq("primary_member_id", identity.effectiveUser.id)
       .order("created_at", { ascending: true });
 
     familyMembers = members || [];
 
-    // Fetch resident's units
+    // Fetch resident's units (both occupied and owned)
     const { data: occupancies } = await adminClient
       .from("unit_occupancies")
       .select("unit:units (*)")
@@ -45,6 +45,21 @@ export default async function ResidentFamilyPage() {
 
     if (occupancies) {
       userUnits = occupancies.map((o: any) => o.unit).filter(Boolean);
+    }
+
+    const { data: owned } = await adminClient
+      .from("unit_owners")
+      .select("unit:units (*)")
+      .eq("society_id", societyId)
+      .eq("user_id", identity.effectiveUser.id)
+      .eq("status", "ACTIVE");
+
+    if (owned) {
+      owned.forEach((o: any) => {
+        if (o.unit && !userUnits.some((u) => u.id === o.unit.id)) {
+          userUnits.push(o.unit);
+        }
+      });
     }
   }
 

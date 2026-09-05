@@ -1,4 +1,4 @@
--- DwellSync Phase 1 Database Schema Migration
+-- DwellSyncHub Phase 1 Database Schema Migration
 -- Establishes Unit Owners, Unit Occupancies (Tenants/Residents), Family Members, and Invitations
 
 -- ============================================================================

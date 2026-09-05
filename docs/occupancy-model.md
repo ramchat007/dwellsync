@@ -1,8 +1,8 @@
-# DwellSync — Occupancy & Tenant Model (Phase 1)
+# DwellSyncHub — Occupancy & Tenant Model (Phase 1)
 
 ## Overview
 
-DwellSync explicitly distinguishes between **Property Ownership** and **Physical Occupancy**. A property owner may live elsewhere (e.g. NRI or investor), while the apartment is occupied by a tenant, a family member, or remains vacant.
+DwellSyncHub explicitly distinguishes between **Property Ownership** and **Physical Occupancy**. A property owner may live elsewhere (e.g. NRI or investor), while the apartment is occupied by a tenant, a family member, or remains vacant.
 
 ## Data Model (`public.unit_occupancies`)
 

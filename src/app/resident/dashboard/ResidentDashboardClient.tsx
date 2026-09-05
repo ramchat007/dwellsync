@@ -32,11 +32,13 @@ export function ResidentDashboardClient({
   society,
   role,
   units,
+  notices = [],
 }: {
   profile: Profile;
   society: Society | null;
   role: RoleId;
   units: Unit[];
+  notices?: any[];
 }) {
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-12">
@@ -67,6 +69,13 @@ export function ResidentDashboardClient({
           </Link>
         </div>
       </div>
+
+      {!society && (
+        <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-xs text-amber-800 dark:text-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+          <span>You do not have an active society membership yet. If you received an invitation link, please visit the link to join your housing society.</span>
+          <Link href="/resident/profile" className="font-bold underline shrink-0">View Account Profile</Link>
+        </div>
+      )}
 
       {/* Grid: My Flat + Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
@@ -117,7 +126,7 @@ export function ResidentDashboardClient({
                       <span className="text-[10px] text-slate-500 uppercase tracking-wider block font-semibold">
                         Monthly Maintenance
                       </span>
-                      <span className="font-bold text-slate-900 dark:text-white">₹0.00 (Up to date)</span>
+                      <span className="font-bold text-slate-700 dark:text-slate-300">No dues recorded</span>
                     </div>
                     <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50">
                       <span className="text-[10px] text-slate-500 uppercase tracking-wider block font-semibold">
@@ -176,31 +185,41 @@ export function ResidentDashboardClient({
               </Link>
             </div>
 
-            <div className="space-y-2.5">
-              <div className="p-3 rounded-xl bg-blue-50/60 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/50">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-xs text-blue-950 dark:text-blue-200">
-                    Water Tank Cleaning Schedule
-                  </span>
-                  <span className="text-[10px] text-blue-600 dark:text-blue-400 font-mono">This Weekend</span>
+            {notices.length > 0 ? (
+              <div className="space-y-2.5">
+                {notices.map((n: any) => (
+                  <div
+                    key={n.id}
+                    className="p-3 rounded-xl bg-blue-50/60 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/50"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-xs text-blue-950 dark:text-blue-200">
+                        {n.title}
+                      </span>
+                      <span className="text-[10px] text-blue-600 dark:text-blue-400 font-mono">
+                        {new Date(n.published_at).toLocaleDateString("en-IN", {
+                          day: "numeric",
+                          month: "short",
+                        })}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1 line-clamp-2">
+                      {n.description}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 text-center py-6">
+                <Bell className="w-6 h-6 text-slate-300 dark:text-slate-600 mx-auto mb-1.5" />
+                <div className="font-bold text-xs text-slate-800 dark:text-slate-200">
+                  No notices published yet
                 </div>
-                <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1">
-                  Semi-annual overhead and underground water tank cleaning scheduled for this Saturday from 10:00 AM to 4:00 PM.
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  Announcements from your society administration will appear here.
                 </p>
               </div>
-
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-xs text-slate-900 dark:text-white">
-                    Upcoming Annual General Meeting (AGM)
-                  </span>
-                  <span className="text-[10px] text-slate-400 font-mono">1 week ago</span>
-                </div>
-                <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1">
-                  Formal notice for the AGM has been published. Please review the agenda and audit reports under Documents.
-                </p>
-              </div>
-            </div>
+            )}
           </div>
         </div>
 
@@ -268,52 +287,14 @@ export function ResidentDashboardClient({
               <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 transition" />
             </Link>
 
-            {/* Future Phase 6: Raise Complaint */}
-            <div className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between opacity-80">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400">
-                  <Wrench className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="font-bold text-xs text-slate-900 dark:text-white">Raise Complaint</div>
-                  <div className="text-[11px] text-slate-500">Helpdesk & ticket tracker</div>
-                </div>
+            {/* Additional Services Notice */}
+            <div className="p-3.5 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/60 text-center py-4 space-y-1">
+              <div className="font-semibold text-xs text-slate-700 dark:text-slate-300">
+                Helpdesk & Gate Services
               </div>
-              <span className="px-2 py-0.5 rounded-md font-mono text-[9px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
-                PHASE 6
-              </span>
-            </div>
-
-            {/* Future Phase 7: Visitor Pass */}
-            <div className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between opacity-80">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400">
-                  <ShieldCheck className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="font-bold text-xs text-slate-900 dark:text-white">Visitor Gate Pass</div>
-                  <div className="text-[11px] text-slate-500">Pre-approve guest entry</div>
-                </div>
-              </div>
-              <span className="px-2 py-0.5 rounded-md font-mono text-[9px] font-bold bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300">
-                PHASE 7
-              </span>
-            </div>
-
-            {/* Future Phase 8: Maintenance Billing */}
-            <div className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between opacity-80">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-teal-50 dark:bg-teal-950 text-teal-600 dark:text-teal-400">
-                  <Receipt className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="font-bold text-xs text-slate-900 dark:text-white">Maintenance Billing</div>
-                  <div className="text-[11px] text-slate-500">Online payments & receipts</div>
-                </div>
-              </div>
-              <span className="px-2 py-0.5 rounded-md font-mono text-[9px] font-bold bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300">
-                PHASE 8
-              </span>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 max-w-xs mx-auto">
+                Complaint ticketing, visitor gate passes, and maintenance payments will appear here when configured by your society.
+              </p>
             </div>
           </div>
 
