@@ -73,7 +73,7 @@ export function UnitDetailDrawer({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const loadUnitDetails = async () => {
+  const loadUnitDetails = React.useCallback(async () => {
     if (!unit) return;
     try {
       setIsLoading(true);
@@ -100,13 +100,13 @@ export function UnitDetailDrawer({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [societyId, unit]);
 
   useEffect(() => {
     if (open && unit) {
       loadUnitDetails();
     }
-  }, [open, unit]);
+  }, [open, unit, loadUnitDetails]);
 
   const handleAddOwner = async (e: React.FormEvent) => {
     e.preventDefault();

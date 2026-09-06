@@ -64,7 +64,7 @@ export function AuthProvider({
     };
   });
 
-  const refreshSession = async () => {
+  const refreshSession = React.useCallback(async () => {
     try {
       const response = await fetch("/api/auth/identity");
       if (response.ok) {
@@ -107,15 +107,15 @@ export function AuthProvider({
     } catch {
       setState((prev) => ({ ...prev, isLoading: false }));
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (!initialIdentity) {
       refreshSession();
     }
-  }, [initialIdentity]);
+  }, [initialIdentity, refreshSession]);
 
-  const switchSociety = async (societyId: string): Promise<boolean> => {
+  const switchSociety = React.useCallback(async (societyId: string): Promise<boolean> => {
     try {
       const res = await fetch("/api/auth/switch-society", {
         method: "POST",
@@ -135,23 +135,23 @@ export function AuthProvider({
       console.error("Error switching society:", err);
       return false;
     }
-  };
+  }, [refreshSession, router]);
 
-  const hasRole = (role: RoleId | RoleId[]): boolean => {
+  const hasRole = React.useCallback((role: RoleId | RoleId[]): boolean => {
     if (!state.currentRole) return false;
     if (Array.isArray(role)) {
       return role.includes(state.currentRole);
     }
     return state.currentRole === role;
-  };
+  }, [state.currentRole]);
 
-  const hasPermission = (permission: string): boolean => {
+  const hasPermission = React.useCallback((permission: string): boolean => {
     if (state.isSuperAdmin && !state.isImpersonating) return true;
     return (
       state.permissions.includes(permission) ||
       roleHasPermission(state.currentRole, permission)
     );
-  };
+  }, [state.currentRole, state.isImpersonating, state.isSuperAdmin, state.permissions]);
 
   const can = hasPermission;
 
@@ -164,7 +164,7 @@ export function AuthProvider({
       hasPermission,
       can,
     }),
-    [state]
+    [state, refreshSession, switchSociety, hasRole, hasPermission, can]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
