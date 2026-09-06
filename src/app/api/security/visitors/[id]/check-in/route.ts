@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentIdentity } from "@/lib/auth/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { recordAuditLog } from "@/lib/auth/audit";
-import { sendNotification } from "@/lib/services/notificationService";
+import { sendDomainNotification } from "@/lib/services/notificationService";
 
 import { checkGatePassRateLimit, recordGatePassFailure, resetGatePassAttempts } from "@/lib/auth/gateRateLimiter";
 
@@ -206,21 +206,26 @@ export async function POST(
       },
     });
 
-    // 6. Send resident arrival notification
-    await sendNotification({
-      channel: "IN_APP",
-      recipient: `unit_${visitor.unit?.unit_number}`,
-      subject: `Visitor Arrival: ${visitor.visitor_name}`,
-      template: "VISITOR_ARRIVED",
-      data: {
-        visitor_name: visitor.visitor_name,
-        purpose: visitor.purpose,
-        unit_number: visitor.unit?.unit_number,
-        vehicle_number: visitor.vehicle_number,
-        gate_number: gateNumber,
-        check_in_at: now,
-      },
-    });
+    // 6. Send resident arrival notification (authoritative recipient resolution)
+    if (visitor.unit_id) {
+      await sendDomainNotification({
+        societyId,
+        unitId: visitor.unit_id,
+        type: "VISITOR_CHECKED_IN",
+        category: "SECURITY",
+        actorId: guardUserId,
+        data: {
+          visitorName: visitor.visitor_name,
+          visitorId: visitor.id,
+          purpose: visitor.purpose,
+          unitNumber: visitor.unit?.unit_number,
+          vehicleNumber: visitor.vehicle_number,
+          gateNumber,
+          checkInAt: now,
+        },
+        dedupKey: `visitor_checkin_${visitor.id}`,
+      });
+    }
 
     return NextResponse.json({ success: true, visitor: updated });
   } catch (err) {

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentIdentity } from "@/lib/auth/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { recordAuditLog } from "@/lib/auth/audit";
-import { sendNotification } from "@/lib/services/notificationService";
+import { sendDomainNotification } from "@/lib/services/notificationService";
 import { GuardWalkInVisitorSchema } from "@/lib/validations/visitor";
 
 const ALLOWED_GATE_ROLES = ["SECURITY", "SOCIETY_ADMIN", "SECRETARY", "MANAGER"];
@@ -189,20 +189,23 @@ export async function POST(req: Request) {
       },
     });
 
-    // Dispatch resident arrival alert via notificationService
-    await sendNotification({
-      channel: "IN_APP",
-      recipient: `unit_${targetUnit.unit_number}`,
-      subject: `Visitor Arrival: ${visitor_name}`,
-      template: "VISITOR_ARRIVED",
+    // Dispatch resident arrival alert via notificationService (authoritative recipient resolution)
+    await sendDomainNotification({
+      societyId,
+      unitId: unit_id,
+      type: "VISITOR_CHECKED_IN",
+      category: "SECURITY",
+      actorId: guardUserId,
       data: {
-        visitor_name,
+        visitorName: visitor_name,
+        visitorId: visitor.id,
         purpose,
-        unit_number: targetUnit.unit_number,
-        vehicle_number,
-        gate_number: gate_number || "Main Gate",
-        check_in_at: now,
+        unitNumber: targetUnit.unit_number,
+        vehicleNumber: vehicle_number,
+        gateNumber: gate_number || "Main Gate",
+        checkInAt: now,
       },
+      dedupKey: `visitor_checkin_${visitor.id}`,
     });
 
     return NextResponse.json({ success: true, visitor }, { status: 201 });

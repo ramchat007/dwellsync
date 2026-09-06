@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { recordAuditLog } from "@/lib/auth/audit";
+import { sendDomainNotification } from "@/lib/services/notificationService";
 import { PaymentMethod, Payment, Receipt, Invoice } from "@/lib/types/database";
 import { PaymentGatewayProvider } from "./types";
 import { OfflinePaymentProvider } from "./offlineProvider";
@@ -195,6 +196,23 @@ export async function recordManualPayment(
         amount: params.amount,
       },
     });
+
+    // 8. Notify resident unit of payment confirmation
+    if (invoice.unit_id) {
+      await sendDomainNotification({
+        societyId: params.societyId,
+        unitId: invoice.unit_id,
+        type: "PAYMENT_RECORDED",
+        category: "BILLING",
+        actorId: params.recordedBy,
+        data: {
+          invoiceNumber: invoice.invoice_number,
+          amount: params.amount,
+          receiptNumber,
+        },
+        dedupKey: `pay_${payment.id}`,
+      });
+    }
 
     return {
       success: true,

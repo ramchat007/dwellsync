@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentIdentity, requireSocietyAccess } from "@/lib/auth/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { recordAuditLog } from "@/lib/auth/audit";
+import { sendDomainNotification } from "@/lib/services/notificationService";
 import { UpdateComplaintSchema } from "@/lib/validations/operations";
 import { z } from "zod";
 
@@ -214,6 +215,24 @@ export async function PATCH(
         resolution_notes: updated.resolution_notes,
       },
     });
+
+    // Notify complaint creator if status changed or assigned
+    if (existing.created_by) {
+      await sendDomainNotification({
+        societyId,
+        recipientIds: [existing.created_by],
+        type: (auditAction as any) || "COMPLAINT_STATUS_CHANGED",
+        category: "COMPLAINTS",
+        actorId: identity.effectiveUser.id,
+        data: {
+          ticketNumber: existing.id.substring(0, 8),
+          complaintId: existing.id,
+          status: updated.status,
+          assignedTo: updated.assignee?.full_name || null,
+          remarks: updated.resolution_notes,
+        },
+      });
+    }
 
     return NextResponse.json({ success: true, complaint: updated });
   } catch (err: any) {

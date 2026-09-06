@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireSocietyAccess } from "@/lib/auth/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { recordAuditLog } from "@/lib/auth/audit";
+import { broadcastSocietyNotification } from "@/lib/services/notificationService";
 import { CreateNoticeSchema } from "@/lib/validations/operations";
 import { z } from "zod";
 
@@ -99,6 +100,19 @@ export async function POST(
         priority: notice.priority,
       },
     });
+
+    // If published immediately, dispatch broadcast notification
+    if (notice.status === "PUBLISHED") {
+      await broadcastSocietyNotification({
+        societyId,
+        actorId: identity.effectiveUser.id,
+        category: "NOTICES",
+        type: notice.priority === "URGENT" ? "IMPORTANT_NOTICE_PUBLISHED" : "NOTICE_PUBLISHED",
+        title: notice.title,
+        body: notice.body,
+        actionUrl: "/resident/notices",
+      });
+    }
 
     return NextResponse.json({ success: true, notice });
   } catch (err: any) {
