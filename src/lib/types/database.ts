@@ -99,7 +99,49 @@ export type AuditAction =
   | "OWNER_ADDED"
   | "OWNER_REMOVED"
   | "TENANT_ADDED"
-  | "TENANT_REMOVED";
+  | "TENANT_REMOVED"
+  | "VISITOR_CREATED"
+  | "VISITOR_APPROVED"
+  | "VISITOR_CHECKED_IN"
+  | "VISITOR_CHECKED_OUT"
+  | "VISITOR_CANCELLED"
+  | "COMPLAINT_CREATED"
+  | "COMPLAINT_ASSIGNED"
+  | "COMPLAINT_STATUS_CHANGED"
+  | "COMPLAINT_RESOLVED"
+  | "COMPLAINT_CLOSED"
+  | "AMENITY_CREATED"
+  | "AMENITY_UPDATED"
+  | "AMENITY_DELETED"
+  | "AMENITY_BOOKED"
+  | "AMENITY_BOOKING_CANCELLED"
+  | "EVENT_CREATED"
+  | "EVENT_UPDATED"
+  | "EVENT_CANCELLED"
+  | "MEETING_SCHEDULED"
+  | "MEETING_UPDATED"
+  | "MEETING_COMPLETED"
+  | "MEETING_CANCELLED"
+  | "NOTICE_CREATED"
+  | "NOTICE_UPDATED"
+  | "NOTICE_ARCHIVED"
+  | "DOCUMENT_UPLOADED"
+  | "DOCUMENT_DELETED"
+  | "MAINTENANCE_CONFIG_CREATED"
+  | "MAINTENANCE_CONFIG_UPDATED"
+  | "BILLING_CYCLE_CREATED"
+  | "INVOICES_BULK_GENERATED"
+  | "INVOICE_STATUS_UPDATED"
+  | "INVOICE_CANCELLED"
+  | "PAYMENT_RECORDED"
+  | "RECEIPT_GENERATED"
+  | "RECEIPT_CANCELLED"
+  | "NOTIFICATION_CREATED"
+  | "NOTIFICATION_SENT"
+  | "NOTIFICATION_FAILED"
+  | "NOTIFICATION_READ"
+  | "NOTIFICATION_BROADCAST"
+  | "NOTIFICATION_PREFERENCES_UPDATED";
 
 export interface Profile {
   id: string;
@@ -412,4 +454,397 @@ export interface ProfilePrivacySettings {
   created_at: string;
   updated_at: string;
 }
+
+export type VisitorPurpose = "GUEST" | "DELIVERY" | "CAB" | "SERVICE" | "FAMILY" | "OTHER";
+
+export type VisitorStatus = "EXPECTED" | "CHECKED_IN" | "CHECKED_OUT" | "CANCELLED" | "DENIED";
+
+export interface Visitor {
+  id: string;
+  society_id: string;
+  unit_id: string;
+  created_by: string;
+  visitor_name: string;
+  visitor_phone?: string | null;
+  purpose: VisitorPurpose;
+  vehicle_number?: string | null;
+  pass_code: string;
+  expected_arrival?: string | null;
+  valid_until?: string | null;
+  status: VisitorStatus;
+  check_in_at?: string | null;
+  check_out_at?: string | null;
+  check_in_by?: string | null;
+  check_out_by?: string | null;
+  gate_number?: string | null;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+  unit?: Unit;
+  creator?: Profile;
+  check_in_guard?: Profile;
+  check_out_guard?: Profile;
+}
+
+// ==========================================
+// PHASE 8: SOCIETY OPERATIONS TYPES
+// ==========================================
+
+export type ComplaintCategory =
+  | "ELECTRICAL"
+  | "PLUMBING"
+  | "ELEVATOR"
+  | "COMMON_AREA"
+  | "SECURITY"
+  | "NOISE"
+  | "CARPENTRY"
+  | "CLEANLINESS"
+  | "OTHER";
+
+export type ComplaintPriority = "LOW" | "MEDIUM" | "HIGH" | "EMERGENCY";
+
+export type ComplaintStatus =
+  | "SUBMITTED"
+  | "ASSIGNED"
+  | "IN_PROGRESS"
+  | "RESOLVED"
+  | "CLOSED";
+
+export interface Complaint {
+  id: string;
+  society_id: string;
+  unit_id?: string | null;
+  created_by: string;
+  title: string;
+  description: string;
+  category: ComplaintCategory;
+  priority: ComplaintPriority;
+  status: ComplaintStatus;
+  assigned_to?: string | null;
+  resolved_at?: string | null;
+  closed_at?: string | null;
+  resolution_notes?: string | null;
+  created_at: string;
+  updated_at: string;
+  unit?: Unit;
+  creator?: Profile;
+  assignee?: Profile;
+}
+
+export type AmenityCategory =
+  | "CLUBHOUSE"
+  | "GYM"
+  | "SWIMMING_POOL"
+  | "TENNIS_COURT"
+  | "COMMUNITY_HALL"
+  | "ROOFTOP"
+  | "BADMINTON_COURT"
+  | "OTHER";
+
+export type AmenityStatus = "AVAILABLE" | "MAINTENANCE" | "CLOSED";
+
+export interface Amenity {
+  id: string;
+  society_id: string;
+  name: string;
+  description?: string | null;
+  category: AmenityCategory;
+  capacity?: number | null;
+  operating_hours_start?: string | null;
+  operating_hours_end?: string | null;
+  slot_duration_minutes?: number | null;
+  rules?: string | null;
+  status: AmenityStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export type BookingStatus = "CONFIRMED" | "CANCELLED" | "COMPLETED";
+
+export interface AmenityBooking {
+  id: string;
+  society_id: string;
+  amenity_id: string;
+  unit_id?: string | null;
+  booked_by: string;
+  booking_date: string;
+  start_time: string;
+  end_time: string;
+  status: BookingStatus;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+  amenity?: Amenity;
+  unit?: Unit;
+  booker?: Profile;
+}
+
+export type EventCategory =
+  | "CELEBRATION"
+  | "MEETING"
+  | "WORKSHOP"
+  | "SPORTS"
+  | "CULTURAL"
+  | "GENERAL";
+
+export type EventStatus = "UPCOMING" | "COMPLETED" | "CANCELLED";
+
+export type EventVisibility = "ALL_RESIDENTS" | "COMMITTEE_ONLY";
+
+export interface SocietyEvent {
+  id: string;
+  society_id: string;
+  title: string;
+  description: string;
+  category: EventCategory;
+  event_date: string;
+  start_time?: string | null;
+  end_time?: string | null;
+  location: string;
+  organizer_name?: string | null;
+  organizer_id?: string | null;
+  visibility: EventVisibility;
+  status: EventStatus;
+  created_at: string;
+  updated_at: string;
+  organizer?: Profile;
+}
+
+export type MeetingType =
+  | "AGM"
+  | "EGM"
+  | "MANAGING_COMMITTEE"
+  | "VENDOR"
+  | "GENERAL";
+
+export type MeetingStatus =
+  | "SCHEDULED"
+  | "IN_PROGRESS"
+  | "COMPLETED"
+  | "CANCELLED";
+
+export type MeetingLocationType = "PHYSICAL" | "ONLINE" | "HYBRID";
+
+export interface SocietyMeeting {
+  id: string;
+  society_id: string;
+  title: string;
+  agenda?: string | null;
+  meeting_type: MeetingType;
+  location_type: MeetingLocationType;
+  location_details?: string | null;
+  meeting_link?: string | null;
+  scheduled_at: string;
+  duration_minutes?: number | null;
+  status: MeetingStatus;
+  minutes_document_id?: string | null;
+  organized_by: string;
+  created_at: string;
+  updated_at: string;
+  organizer?: Profile;
+  minutes_document?: SocietyDocument;
+}
+
+// ==========================================
+// PHASE 9: MAINTENANCE & BILLING MODELS
+// ==========================================
+
+export type MaintenanceChargeType = "FLAT_RATE" | "AREA_BASED" | "UNIT_TYPE_BASED";
+
+export type MaintenanceFrequency =
+  | "MONTHLY"
+  | "QUARTERLY"
+  | "BIANNUAL"
+  | "ANNUAL"
+  | "ONE_TIME";
+
+export interface MaintenanceConfiguration {
+  id: string;
+  society_id: string;
+  name: string;
+  description?: string | null;
+  charge_type: MaintenanceChargeType;
+  rate: number;
+  unit_type_rates?: Record<string, number> | null;
+  frequency: MaintenanceFrequency;
+  effective_from: string;
+  effective_to?: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export type BillingCycleStatus = "DRAFT" | "GENERATED" | "CLOSED" | "CANCELLED";
+
+export interface BillingCycle {
+  id: string;
+  society_id: string;
+  name: string;
+  period_start: string;
+  period_end: string;
+  due_date: string;
+  status: BillingCycleStatus;
+  notes?: string | null;
+  created_by?: string | null;
+  created_at: string;
+  updated_at: string;
+  creator?: Profile;
+}
+
+export type InvoiceStatus =
+  | "UNPAID"
+  | "PARTIALLY_PAID"
+  | "PAID"
+  | "OVERDUE"
+  | "CANCELLED";
+
+export interface InvoiceLineItem {
+  description: string;
+  amount: number;
+  category?: string;
+}
+
+export interface Invoice {
+  id: string;
+  society_id: string;
+  unit_id: string;
+  billing_cycle_id?: string | null;
+  charge_config_id?: string | null;
+  invoice_number: string;
+  invoice_date: string;
+  due_date: string;
+  subtotal: number;
+  adjustments: number;
+  total_amount: number;
+  amount_paid: number;
+  balance_due: number;
+  status: InvoiceStatus;
+  line_items: InvoiceLineItem[];
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+  unit?: Unit;
+  billing_cycle?: BillingCycle;
+  charge_config?: MaintenanceConfiguration;
+}
+
+export type PaymentMethod =
+  | "CASH"
+  | "CHEQUE"
+  | "BANK_TRANSFER"
+  | "UPI"
+  | "CARD"
+  | "OTHER";
+
+export type PaymentStatus = "COMPLETED" | "PENDING" | "FAILED" | "CANCELLED";
+
+export interface Payment {
+  id: string;
+  society_id: string;
+  invoice_id: string;
+  unit_id: string;
+  amount: number;
+  payment_date: string;
+  payment_method: PaymentMethod;
+  reference_number?: string | null;
+  status: PaymentStatus;
+  recorded_by: string;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+  invoice?: Invoice;
+  unit?: Unit;
+  recorder?: Profile;
+}
+
+export interface Receipt {
+  id: string;
+  society_id: string;
+  invoice_id: string;
+  payment_id: string;
+  unit_id: string;
+  receipt_number: string;
+  amount: number;
+  receipt_date: string;
+  issued_by: string;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+  invoice?: Invoice;
+  payment?: Payment;
+  unit?: Unit;
+  issuer?: Profile;
+}
+
+// ==========================================
+// PHASE 10: COMMUNICATION & NOTIFICATION MODELS
+// ==========================================
+
+export type DbNotificationCategory =
+  | "SECURITY"
+  | "BILLING"
+  | "COMPLAINTS"
+  | "NOTICES"
+  | "AMENITIES"
+  | "EVENTS"
+  | "GENERAL";
+
+export interface Notification {
+  id: string;
+  society_id: string;
+  recipient_id: string;
+  actor_id?: string | null;
+  category: DbNotificationCategory;
+  type: string;
+  title: string;
+  body: string;
+  action_url?: string | null;
+  is_read: boolean;
+  read_at?: string | null;
+  dedup_key?: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+  recipient?: Profile;
+  actor?: Profile;
+}
+
+export interface NotificationPreference {
+  id: string;
+  user_id: string;
+  society_id: string;
+  category: DbNotificationCategory;
+  email_enabled: boolean;
+  sms_enabled: boolean;
+  whatsapp_enabled: boolean;
+  in_app_enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export type DbDeliveryChannel = "IN_APP" | "EMAIL" | "SMS" | "WHATSAPP";
+export type DbDeliveryStatus =
+  | "QUEUED"
+  | "ACCEPTED"
+  | "DELIVERED"
+  | "FAILED"
+  | "RETRYING"
+  | "CANCELLED";
+
+export interface NotificationDelivery {
+  id: string;
+  notification_id: string;
+  channel: DbDeliveryChannel;
+  provider: string;
+  provider_message_id?: string | null;
+  status: DbDeliveryStatus;
+  error_message?: string | null;
+  attempts: number;
+  created_at: string;
+  updated_at: string;
+  notification?: Notification;
+}
+
+
+
 

@@ -10,6 +10,8 @@ import {
   FileText,
   Users,
   User,
+  ShieldCheck,
+  Receipt,
 } from "lucide-react";
 
 export function ResidentBottomNav() {
@@ -17,10 +19,10 @@ export function ResidentBottomNav() {
 
   const navItems = [
     { label: "Home", href: "/resident/dashboard", icon: Home },
-    { label: "My Unit", href: "/resident/home", icon: Building2 },
+    { label: "Dues", href: "/resident/dues", icon: Receipt },
+    { label: "Gate Passes", href: "/resident/visitors", icon: ShieldCheck },
     { label: "Notices", href: "/resident/notices", icon: Bell },
     { label: "Documents", href: "/resident/documents", icon: FileText },
-    { label: "Community", href: "/resident/community", icon: Users },
     { label: "Profile", href: "/resident/profile", icon: User },
   ];
 

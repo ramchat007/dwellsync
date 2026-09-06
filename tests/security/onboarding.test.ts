@@ -24,6 +24,31 @@ describe("Phase 1 Society Onboarding & Bulk Generation Tests", () => {
       expect(result.success).toBe(true);
     });
 
+    it("should accept payload with empty string optional fields without 400 failure", () => {
+      const payload = {
+        name: "Sunrise Heights",
+        code: "SUN-001",
+        registration_number: "",
+        logo_url: "",
+        address_line_1: "Block B, Tech Park Road",
+        address_line_2: "",
+        landmark: "",
+        city: "Pune",
+        state: "Maharashtra",
+        pincode: "411014",
+        contact_email: "",
+        contact_phone: "",
+        website: "",
+        admin_full_name: "Ramesh Pawar",
+        admin_email: "ramesh@sunrise.internal",
+        admin_phone: "",
+        admin_password: "TestPassword@123",
+      };
+
+      const result = onboardingSchema.safeParse(payload);
+      expect(result.success).toBe(true);
+    });
+
     it("should reject payload with invalid code format", () => {
       const payload = {
         name: "Green Valley CHS",

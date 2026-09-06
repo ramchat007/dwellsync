@@ -184,6 +184,12 @@ export function getNavigationForRole(
       { label: "Buildings & Wings", href: `/society/${sid}/buildings`, iconName: "Building2" },
       { label: "Units & Flats", href: `/society/${sid}/units`, iconName: "DoorOpen" },
       { label: "People Directory", href: `/society/${sid}/people`, iconName: "Users" },
+      { label: "Complaints & Helpdesk", href: `/society/${sid}/complaints`, iconName: "MessageSquare" },
+      { label: "Billing & Invoices", href: `/society/${sid}/billing`, iconName: "Receipt" },
+      { label: "Amenities", href: `/society/${sid}/amenities`, iconName: "Sparkles" },
+      { label: "Events & Meetings", href: `/society/${sid}/events`, iconName: "Calendar" },
+      { label: "Notices", href: `/society/${sid}/notices`, iconName: "Bell" },
+      { label: "Documents", href: `/society/${sid}/documents`, iconName: "FileText" },
       { label: "Society Settings", href: `/society/${sid}/society`, iconName: "Settings" },
     ];
   }
@@ -195,6 +201,10 @@ export function getNavigationForRole(
       { label: "Buildings & Layout", href: `/society/${sid}/buildings`, iconName: "Building2" },
       { label: "Units Directory", href: `/society/${sid}/units`, iconName: "DoorOpen" },
       { label: "Members Roster", href: `/society/${sid}/people`, iconName: "Users" },
+      { label: "Complaints", href: `/society/${sid}/complaints`, iconName: "MessageSquare" },
+      { label: "Events & Meetings", href: `/society/${sid}/events`, iconName: "Calendar" },
+      { label: "Notices", href: `/society/${sid}/notices`, iconName: "Bell" },
+      { label: "Documents", href: `/society/${sid}/documents`, iconName: "FileText" },
       { label: "Society Profile", href: `/society/${sid}/society`, iconName: "Settings" },
     ];
   }
@@ -203,8 +213,10 @@ export function getNavigationForRole(
   if (role === "TREASURER") {
     return [
       { label: "Finance Hub", href: "/finance/dashboard", iconName: "LayoutDashboard" },
+      { label: "Billing & Invoices", href: `/society/${sid}/billing`, iconName: "Receipt" },
       { label: "Units & Dues", href: `/society/${sid}/units`, iconName: "DoorOpen" },
       { label: "Member Directory", href: `/society/${sid}/people`, iconName: "Users" },
+      { label: "Documents", href: `/society/${sid}/documents`, iconName: "FileText" },
       { label: "Society Profile", href: `/society/${sid}/society`, iconName: "Settings" },
     ];
   }
@@ -213,8 +225,14 @@ export function getNavigationForRole(
   if (role === "RESIDENT" || role === "OWNER" || role === "TENANT") {
     return [
       { label: "My Home", href: "/resident/dashboard", iconName: "LayoutDashboard" },
-      { label: "Society Directory", href: `/society/${sid}/people`, iconName: "Users" },
-      { label: "Society Details", href: `/society/${sid}/society`, iconName: "Building2" },
+      { label: "Dues & Invoices", href: "/resident/dues", iconName: "Receipt" },
+      { label: "Gate Passes", href: "/resident/visitors", iconName: "ShieldAlert" },
+      { label: "Complaints", href: "/resident/complaints", iconName: "MessageSquare" },
+      { label: "Amenities", href: "/resident/amenities", iconName: "Sparkles" },
+      { label: "Events", href: "/resident/events", iconName: "Calendar" },
+      { label: "Notices", href: "/resident/notices", iconName: "Bell" },
+      { label: "Documents", href: "/resident/documents", iconName: "FileText" },
+      { label: "Community", href: "/resident/community", iconName: "Users" },
     ];
   }
 
@@ -230,6 +248,8 @@ export function getNavigationForRole(
   if (role === "MANAGER" || role === "STAFF" || role === "AUDITOR") {
     return [
       { label: "Operations Hub", href: "/staff/dashboard", iconName: "Wrench" },
+      { label: "Complaints", href: `/society/${sid}/complaints`, iconName: "MessageSquare" },
+      { label: "Amenities", href: `/society/${sid}/amenities`, iconName: "Sparkles" },
       { label: "Buildings & Units", href: `/society/${sid}/units`, iconName: "DoorOpen" },
       { label: "People Directory", href: `/society/${sid}/people`, iconName: "Users" },
     ];

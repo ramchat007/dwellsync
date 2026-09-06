@@ -24,6 +24,9 @@ import {
   Truck,
   Calendar,
   CheckSquare,
+  MessageSquare,
+  Sparkles,
+  Bell,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -43,6 +46,9 @@ const ICON_MAP: Record<string, React.ElementType> = {
   Truck,
   Calendar,
   CheckSquare,
+  MessageSquare,
+  Sparkles,
+  Bell,
 };
 
 export function Sidebar({ className }: { className?: string }) {

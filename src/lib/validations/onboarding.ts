@@ -11,7 +11,7 @@ export const onboardingSchema = z.object({
     .regex(/^[A-Z0-9_-]+$/, "Code must contain only uppercase alphanumeric characters, dashes, or underscores"),
   registration_number: z.string().max(80).optional().nullable(),
   society_type: societyTypeEnum.default("COOPERATIVE_HOUSING"),
-  logo_url: z.string().url("Invalid URL format").optional().nullable(),
+  logo_url: z.string().url("Invalid URL format").or(z.literal("")).optional().nullable(),
 
   // Step 2: Address
   address_line_1: z.string().min(1, "Address Line 1 is required").max(200),
@@ -22,9 +22,9 @@ export const onboardingSchema = z.object({
   state: z.string().min(1, "State is required").max(100),
   pincode: z.string().regex(/^\d{5,8}$/, "Invalid postal/pincode format"),
   country: z.string().default("India"),
-  contact_email: z.string().email("Invalid email format").optional().nullable(),
-  contact_phone: z.string().regex(/^[0-9+ -]{7,15}$/, "Invalid phone format").optional().nullable(),
-  website: z.string().url("Invalid URL format").optional().nullable(),
+  contact_email: z.string().email("Invalid email format").or(z.literal("")).optional().nullable(),
+  contact_phone: z.string().regex(/^[0-9+ -]{7,15}$/, "Invalid phone format").or(z.literal("")).optional().nullable(),
+  website: z.string().url("Invalid URL format").or(z.literal("")).optional().nullable(),
 
   // Step 3: Society Configuration
   timezone: z.string().default("Asia/Kolkata"),
@@ -46,7 +46,7 @@ export const onboardingSchema = z.object({
   // Step 5: Initial Administrator
   admin_full_name: z.string().min(1, "Admin full name is required").max(100),
   admin_email: z.string().email("Valid admin email is required"),
-  admin_phone: z.string().regex(/^[0-9+ -]{7,15}$/, "Invalid admin phone format").optional().nullable(),
+  admin_phone: z.string().regex(/^[0-9+ -]{7,15}$/, "Invalid admin phone format").or(z.literal("")).optional().nullable(),
   admin_password: z.string().min(8, "Password must be at least 8 characters").default("TestPassword@123"),
 });
 

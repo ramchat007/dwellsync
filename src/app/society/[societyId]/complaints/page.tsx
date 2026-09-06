@@ -1,34 +1,76 @@
 import React from "react";
-import { MessageSquare } from "lucide-react";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { requireSocietyAccess } from "@/lib/auth/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { ComplaintsAdminClient } from "./ComplaintsAdminClient";
 
-export default function SocietyComplaintsPage() {
+export const dynamic = "force-dynamic";
+
+export default async function SocietyComplaintsPage({
+  params,
+}: {
+  params: Promise<{ societyId: string }>;
+}) {
+  const { societyId } = await params;
+  const { identity } = await requireSocietyAccess(societyId);
+
+  const adminClient = createAdminClient();
+
+  // 1. Fetch complaints for society
+  const { data: complaints } = await adminClient
+    .from("complaints")
+    .select(`
+      *,
+      unit:units (
+        id,
+        unit_number,
+        building:buildings (name, code),
+        wing:wings (name, code)
+      ),
+      creator:profiles!complaints_created_by_fkey (
+        id,
+        full_name,
+        display_name,
+        email,
+        phone
+      ),
+      assignee:profiles!complaints_assigned_to_fkey (
+        id,
+        full_name,
+        display_name,
+        email
+      )
+    `)
+    .eq("society_id", societyId)
+    .order("created_at", { ascending: false });
+
+  // 2. Fetch staff & managers for assignment
+  const { data: staffMembers } = await adminClient
+    .from("society_memberships")
+    .select(`
+      user_id,
+      role_id,
+      user:profiles (
+        id,
+        full_name,
+        display_name,
+        email
+      )
+    `)
+    .eq("society_id", societyId)
+    .eq("status", "ACTIVE")
+    .in("role_id", ["STAFF", "MANAGER", "SOCIETY_ADMIN", "SECRETARY", "COMMITTEE_MEMBER"]);
+
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
-      <div>
-        <h1 className="text-xl font-bold text-slate-900">Helpdesk & Complaints</h1>
-        <p className="text-xs text-slate-500">
-          Society issue tracking, maintenance tickets, and SLA management.
-        </p>
-      </div>
-
-      <Card className="border-dashed border-2 border-slate-300 bg-white">
-        <CardHeader className="text-center py-12">
-          <div className="w-12 h-12 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-3">
-            <MessageSquare className="w-6 h-6" />
-          </div>
-          <Badge variant="secondary" className="mx-auto font-mono text-[10px] uppercase">
-            Phase 1 Module
-          </Badge>
-          <CardTitle className="text-lg font-bold text-slate-900 mt-2">
-            Complaints & Helpdesk (Planned)
-          </CardTitle>
-          <CardDescription className="text-xs text-slate-500 max-w-md mx-auto">
-            Categorized ticket dispatch, SLA escalations, vendor work orders, and resident notifications will be delivered in Phase 1.
-          </CardDescription>
-        </CardHeader>
-      </Card>
+    <div className="space-y-6 max-w-7xl mx-auto">
+      <ComplaintsAdminClient
+        initialComplaints={complaints || []}
+        staffMembers={(staffMembers || []).map((sm: any) => ({
+          ...sm.user,
+          role_id: sm.role_id,
+        }))}
+        societyId={societyId}
+        currentUserId={identity.effectiveUser.id}
+      />
     </div>
   );
 }

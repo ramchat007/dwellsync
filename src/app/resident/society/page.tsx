@@ -40,12 +40,6 @@ export default async function ResidentSocietyPage() {
         phone: m.profile?.phone,
         email: m.profile?.email,
       }));
-    } else {
-      officeBearers = [
-        { role: "Society Secretary", name: "Ananya Deshmukh", phone: "+91 98201 11223", email: "secretary@greenvalley.internal" },
-        { role: "Society Treasurer", name: "Rajesh Iyer", phone: "+91 98201 44556", email: "treasurer@greenvalley.internal" },
-        { role: "Facility Manager", name: "Manoj Sawant", phone: "+91 98201 77889", email: "manager@greenvalley.internal" },
-      ];
     }
   }
 
