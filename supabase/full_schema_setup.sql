@@ -309,6 +309,25 @@ CREATE TABLE IF NOT EXISTS public.audit_logs (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- 20. Society Access Requests Table
+CREATE TABLE IF NOT EXISTS public.society_access_requests (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  society_id UUID NOT NULL REFERENCES public.societies(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  unit_id UUID REFERENCES public.units(id) ON DELETE SET NULL,
+  unit_number TEXT NOT NULL,
+  applicant_name TEXT,
+  applicant_phone TEXT,
+  applicant_email TEXT,
+  requested_role TEXT NOT NULL DEFAULT 'RESIDENT' CHECK (requested_role IN ('OWNER', 'TENANT', 'RESIDENT')),
+  status TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED')),
+  notes TEXT,
+  reviewed_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+  reviewed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- Helper Security Functions
 CREATE OR REPLACE FUNCTION public.is_super_admin(check_user_id UUID DEFAULT auth.uid())
 RETURNS BOOLEAN AS $$

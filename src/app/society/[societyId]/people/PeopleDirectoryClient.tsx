@@ -54,12 +54,74 @@ export function PeopleDirectoryClient({
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState("all");
 
-  // Modals
+  // Modals & form state
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [inviteSuccessToken, setInviteSuccessToken] = useState<string | null>(null);
+
+  // Access Requests State
+  const [accessRequests, setAccessRequests] = useState<any[]>([]);
+  const [isLoadingRequests, setIsLoadingRequests] = useState(false);
+  const [processingRequestId, setProcessingRequestId] = useState<string | null>(null);
+
+  const fetchAccessRequests = async () => {
+    try {
+      setIsLoadingRequests(true);
+      const res = await fetch(`/api/society/${societyId}/access-requests`);
+      const data = await res.json();
+      if (res.ok && data.requests) {
+        setAccessRequests(data.requests);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoadingRequests(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchAccessRequests();
+  }, [societyId]);
+
+  const handleApproveRequest = async (requestId: string, role: string) => {
+    try {
+      setProcessingRequestId(requestId);
+      const res = await fetch(`/api/society/${societyId}/access-requests/${requestId}/approve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setAccessRequests((prev) => prev.filter((r) => r.id !== requestId));
+        router.refresh();
+      } else {
+        alert(data.error || "Failed to approve request.");
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setProcessingRequestId(null);
+    }
+  };
+
+  const handleRejectRequest = async (requestId: string) => {
+    try {
+      setProcessingRequestId(requestId);
+      const res = await fetch(`/api/society/${societyId}/access-requests/${requestId}/reject`, {
+        method: "POST",
+      });
+      if (res.ok) {
+        setAccessRequests((prev) => prev.filter((r) => r.id !== requestId));
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setProcessingRequestId(null);
+    }
+  };
 
   // Forms
   const [addForm, setAddForm] = useState<{
@@ -200,6 +262,9 @@ export function PeopleDirectoryClient({
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="bg-slate-100 p-1 flex-wrap">
             <TabsTrigger value="all">All ({members.length})</TabsTrigger>
+            <TabsTrigger value="requests" className="text-amber-700 font-bold relative">
+              Access Requests {accessRequests.length > 0 && `(${accessRequests.length})`}
+            </TabsTrigger>
             <TabsTrigger value="owners">Owners</TabsTrigger>
             <TabsTrigger value="residents">Residents</TabsTrigger>
             <TabsTrigger value="tenants">Tenants</TabsTrigger>
@@ -222,73 +287,142 @@ export function PeopleDirectoryClient({
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Member Name & Email</TableHead>
-              <TableHead>Assigned Role</TableHead>
-              <TableHead>Unit / Flat</TableHead>
-              <TableHead>Membership Status</TableHead>
-              <TableHead className="text-right">Joined Date</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtered.length > 0 ? (
-              filtered.map((member) => (
-                <TableRow key={member.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs">
-                        {member.profile?.full_name?.[0]?.toUpperCase() ||
-                          member.profile?.email?.[0]?.toUpperCase() ||
-                          "U"}
-                      </div>
-                      <div>
-                        <div className="font-semibold text-xs text-slate-900">
-                          {member.profile?.full_name || member.profile?.display_name || "Member"}
-                        </div>
-                        <div className="text-[11px] text-slate-500 font-mono">
-                          {member.profile?.email}
-                        </div>
-                      </div>
-                    </div>
-                  </TableCell>
-
-                  <TableCell>
-                    <Badge variant="default" className="font-mono text-[10px]">
-                      {member.role_id}
-                    </Badge>
-                  </TableCell>
-
-                  <TableCell className="text-xs font-mono font-medium text-slate-700">
-                    {member.unit_number || "—"}
-                  </TableCell>
-
-                  <TableCell>
-                    <Badge
-                      variant={member.status === "ACTIVE" ? "success" : "secondary"}
-                      className="font-mono text-[10px]"
-                    >
-                      {member.status}
-                    </Badge>
-                  </TableCell>
-
-                  <TableCell className="text-right font-mono text-xs text-slate-500">
-                    {formatDate(member.joined_at || member.created_at)}
+        {activeTab === "requests" ? (
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-amber-50/50">
+                <TableHead>Applicant Name</TableHead>
+                <TableHead>Phone / Email</TableHead>
+                <TableHead>Requested Unit / Flat</TableHead>
+                <TableHead>Requested Type</TableHead>
+                <TableHead className="text-right">Admin Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {accessRequests.length > 0 ? (
+                accessRequests.map((req) => (
+                  <TableRow key={req.id}>
+                    <TableCell className="font-semibold text-xs text-slate-900">
+                      {req.applicant_name || req.applicant?.full_name || "Applicant Resident"}
+                    </TableCell>
+                    <TableCell className="text-xs font-mono text-slate-600">
+                      {req.applicant_phone || req.applicant?.phone || req.applicant_email || "-"}
+                    </TableCell>
+                    <TableCell className="text-xs font-bold text-indigo-600">
+                      Unit {req.unit_number}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={req.requested_role === "OWNER" ? "success" : "default"} className="text-[10px]">
+                        {req.requested_role}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right space-x-1.5">
+                      <Button
+                        size="sm"
+                        onClick={() => handleApproveRequest(req.id, "OWNER")}
+                        disabled={processingRequestId === req.id}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] h-7 px-2"
+                      >
+                        Approve as Owner
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => handleApproveRequest(req.id, "TENANT")}
+                        disabled={processingRequestId === req.id}
+                        className="bg-blue-600 hover:bg-blue-700 text-white text-[11px] h-7 px-2"
+                      >
+                        Approve as Tenant
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleRejectRequest(req.id)}
+                        disabled={processingRequestId === req.id}
+                        className="text-rose-600 hover:bg-rose-50 text-[11px] h-7 px-2"
+                      >
+                        Reject
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={5} className="py-12 text-center text-slate-400 text-xs">
+                    No pending access requests. All connection requests have been reviewed.
                   </TableCell>
                 </TableRow>
-              ))
-            ) : (
+              )}
+            </TableBody>
+          </Table>
+        ) : (
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={5} className="py-12 text-center text-slate-400 text-xs">
-                  {search || activeTab !== "all"
-                    ? "No matching people found."
-                    : "No members registered in this society."}
-                </TableCell>
+                <TableHead>Member Name & Email</TableHead>
+                <TableHead>Assigned Role</TableHead>
+                <TableHead>Unit / Flat</TableHead>
+                <TableHead>Membership Status</TableHead>
+                <TableHead className="text-right">Joined Date</TableHead>
               </TableRow>
-            )}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {filtered.length > 0 ? (
+                filtered.map((member) => (
+                  <TableRow key={member.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs">
+                          {member.profile?.full_name?.[0]?.toUpperCase() ||
+                            member.profile?.email?.[0]?.toUpperCase() ||
+                            "U"}
+                        </div>
+                        <div>
+                          <div className="font-semibold text-xs text-slate-900">
+                            {member.profile?.full_name || member.profile?.display_name || "Member"}
+                          </div>
+                          <div className="text-[11px] text-slate-500 font-mono">
+                            {member.profile?.email}
+                          </div>
+                        </div>
+                      </div>
+                    </TableCell>
+
+                    <TableCell>
+                      <Badge variant="default" className="font-mono text-[10px]">
+                        {member.role_id}
+                      </Badge>
+                    </TableCell>
+
+                    <TableCell className="text-xs font-mono font-medium text-slate-700">
+                      {member.unit_number || "—"}
+                    </TableCell>
+
+                    <TableCell>
+                      <Badge
+                        variant={member.status === "ACTIVE" ? "success" : "secondary"}
+                        className="font-mono text-[10px]"
+                      >
+                        {member.status}
+                      </Badge>
+                    </TableCell>
+
+                    <TableCell className="text-right font-mono text-xs text-slate-500">
+                      {formatDate(member.joined_at || member.created_at)}
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={5} className="py-12 text-center text-slate-400 text-xs">
+                    {search || activeTab !== "all"
+                      ? "No matching people found."
+                      : "No members registered in this society."}
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        )}
       </div>
 
       {/* Add Member Dialog */}

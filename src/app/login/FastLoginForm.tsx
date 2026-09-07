@@ -18,6 +18,7 @@ import {
   HelpCircle,
   Globe,
   Send,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,9 +61,29 @@ export function FastLoginForm() {
   const [authContext, setAuthContext] = useState<AuthContextResult | null>(null);
 
   // Unlinked Request Access Form
+  const [unlinkedMode, setUnlinkedMode] = useState<"choose" | "register" | "join">("choose");
   const [requestSocietyName, setRequestSocietyName] = useState("");
   const [requestUnitNumber, setRequestUnitNumber] = useState("");
   const [requestSent, setRequestSent] = useState(false);
+
+  // New Society Registration Form
+  const [regSocietyName, setRegSocietyName] = useState("");
+  const [regSocietyCode, setRegSocietyCode] = useState("");
+  const [regCity, setRegCity] = useState("Mumbai");
+  const [regRole, setRegRole] = useState("SOCIETY_ADMIN");
+  const [regWings, setRegWings] = useState("2");
+  const [regFloors, setRegFloors] = useState("7");
+  const [regUnitsPerFloor, setRegUnitsPerFloor] = useState("4");
+  const [isRegistering, setIsRegistering] = useState(false);
+
+  // Join Existing Society Directory & Units Lookup
+  const [societyList, setSocietyList] = useState<{ id: string; name: string; code: string; city: string }[]>([]);
+  const [selectedJoinSocietyId, setSelectedJoinSocietyId] = useState("");
+  const [availableUnits, setAvailableUnits] = useState<{ id: string; unit_number: string; wing_name: string; is_claimed: boolean }[]>([]);
+  const [selectedUnitId, setSelectedUnitId] = useState("");
+  const [requestedRole, setRequestedRole] = useState<"OWNER" | "TENANT">("OWNER");
+  const [isLoadingSocieties, setIsLoadingSocieties] = useState(false);
+  const [isLoadingUnits, setIsLoadingUnits] = useState(false);
 
   const otpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -82,6 +103,58 @@ export function FastLoginForm() {
     }
     return () => clearInterval(timer);
   }, [step, countdown]);
+
+  // Fetch registered societies directory for joining
+  useEffect(() => {
+    if (step === "unlinked_account" && unlinkedMode === "join") {
+      const fetchSocieties = async () => {
+        try {
+          setIsLoadingSocieties(true);
+          const res = await fetch("/api/society/directory");
+          const data = await res.json();
+          if (res.ok && data.societies) {
+            setSocietyList(data.societies);
+            if (data.societies.length > 0 && !selectedJoinSocietyId) {
+              setSelectedJoinSocietyId(data.societies[0].id);
+            }
+          }
+        } catch (err) {
+          console.error("Failed to load societies:", err);
+        } finally {
+          setIsLoadingSocieties(false);
+        }
+      };
+      fetchSocieties();
+    }
+  }, [step, unlinkedMode]);
+
+  // Fetch available units when selected society changes
+  useEffect(() => {
+    if (selectedJoinSocietyId) {
+      const fetchUnits = async () => {
+        try {
+          setIsLoadingUnits(true);
+          const res = await fetch(`/api/society/${selectedJoinSocietyId}/units-available`);
+          const data = await res.json();
+          if (res.ok && data.units) {
+            setAvailableUnits(data.units);
+            if (data.units.length > 0) {
+              setSelectedUnitId(data.units[0].id);
+              setRequestUnitNumber(data.units[0].unit_number);
+            } else {
+              setSelectedUnitId("");
+              setRequestUnitNumber("");
+            }
+          }
+        } catch (err) {
+          console.error("Failed to load units:", err);
+        } finally {
+          setIsLoadingUnits(false);
+        }
+      };
+      fetchUnits();
+    }
+  }, [selectedJoinSocietyId]);
 
   // Handle Request OTP (Mobile or Email)
   const handleSendOtp = async (methodToUse: "mobile" | "email" = authMethod) => {
@@ -293,23 +366,97 @@ export function FastLoginForm() {
 
   // Handle Unlinked Access Request
   const handleRequestAccess = async () => {
-    if (!requestSocietyName) {
-      setError("Please enter the name of your society/apartment.");
+    if (!selectedJoinSocietyId && !requestSocietyName) {
+      setError("Please select a registered housing society.");
       return;
     }
+    if (!requestUnitNumber) {
+      setError("Please select or enter your flat/unit number.");
+      return;
+    }
+
     try {
       setIsLoading(true);
-      await fetch("/api/auth/request-access", {
+      setError(null);
+      const res = await fetch("/api/auth/request-access", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          societyName: requestSocietyName,
+          societyId: selectedJoinSocietyId || undefined,
+          societyName: requestSocietyName || undefined,
+          unitId: selectedUnitId || undefined,
           unitNumber: requestUnitNumber,
+          requestedRole,
         }),
       });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setError(data.error || "Failed to dispatch request.");
+        return;
+      }
       setRequestSent(true);
     } catch (err) {
       setError("Failed to send request.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle Self-Serve Society Registration
+  const handleRegisterSociety = async () => {
+    if (!regSocietyName.trim() || !regSocietyCode.trim()) {
+      setError("Please enter the Society Name and a unique Code (e.g. GVCHS).");
+      return;
+    }
+
+    try {
+      setIsRegistering(true);
+      setError(null);
+
+      const res = await fetch("/api/society/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: regSocietyName,
+          code: regSocietyCode,
+          city: regCity,
+          role: regRole,
+          numberOfWings: parseInt(regWings) || 1,
+          floorsPerWing: parseInt(regFloors) || 5,
+          unitsPerFloor: parseInt(regUnitsPerFloor) || 4,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setError(data.error || "Failed to register society. Please check your details.");
+        return;
+      }
+
+      await refreshSession();
+      window.location.href = data.redirectUrl || `/society/${data.societyId}/dashboard`;
+    } catch (err) {
+      console.error(err);
+      setError("Network error during registration.");
+    } finally {
+      setIsRegistering(false);
+    }
+  };
+
+  // Check Approval Status
+  const handleCheckApproval = async () => {
+    try {
+      setIsLoading(true);
+      const res = await fetch("/api/auth/identity");
+      const data = await res.json();
+      if (res.ok && data.availableSocieties && data.availableSocieties.length > 0) {
+        await refreshSession();
+        window.location.href = "/resident/dashboard";
+      } else {
+        setInfoMessage("Access is still awaiting approval from the society administrator.");
+      }
+    } catch (err) {
+      console.error(err);
     } finally {
       setIsLoading(false);
     }
@@ -748,62 +895,351 @@ export function FastLoginForm() {
           {/* ========================================================================= */}
           {step === "unlinked_account" && (
             <div className="space-y-4">
-              {requestSent ? (
-                <div className="p-4 rounded-xl bg-emerald-950/60 border border-emerald-800 text-emerald-200 text-center space-y-2">
-                  <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto" />
-                  <div className="font-bold text-xs">Access Request Dispatched</div>
-                  <p className="text-[11px] text-slate-300">
-                    Your society administrator will review and link your account to your apartment. You will receive an SMS confirmation once approved.
-                  </p>
-                </div>
-              ) : (
+              {/* Option Choice Screen */}
+              {unlinkedMode === "choose" && (
                 <div className="space-y-3">
-                  <div className="p-3 rounded-lg bg-amber-950/60 border border-amber-800 text-amber-200 text-[11px] flex items-start gap-2">
-                    <HelpCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                    <span>
-                      Your DwellSyncHub account is verified, but not yet linked to an active housing society.
+                  <div className="text-[11px] text-slate-300">
+                    Your account is verified! Choose how you want to get started with DwellSync:
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-2.5">
+                    {/* Path 1: Register New Society */}
+                    <button
+                      type="button"
+                      onClick={() => setUnlinkedMode("register")}
+                      className="p-3.5 rounded-xl bg-slate-900 hover:bg-indigo-950/60 border border-slate-800 hover:border-indigo-500 text-left transition flex items-start gap-3 group"
+                    >
+                      <div className="p-2 rounded-lg bg-indigo-600/20 text-indigo-400 group-hover:bg-indigo-600 group-hover:text-white transition">
+                        <Building2 className="w-5 h-5" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-bold text-white text-xs flex items-center justify-between">
+                          <span>Register a New Society</span>
+                          <ArrowRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-indigo-400 transition" />
+                        </div>
+                        <p className="text-[11px] text-slate-400 mt-0.5">
+                          For Society Secretaries, Chairmen, Accountants, or Committee Members setting up a new community.
+                        </p>
+                      </div>
+                    </button>
+
+                    {/* Path 2: Join Existing Society */}
+                    <button
+                      type="button"
+                      onClick={() => setUnlinkedMode("join")}
+                      className="p-3.5 rounded-xl bg-slate-900 hover:bg-emerald-950/60 border border-slate-800 hover:border-emerald-500 text-left transition flex items-start gap-3 group"
+                    >
+                      <div className="p-2 rounded-lg bg-emerald-600/20 text-emerald-400 group-hover:bg-emerald-600 group-hover:text-white transition">
+                        <Users className="w-5 h-5" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-bold text-white text-xs flex items-center justify-between">
+                          <span>Join an Existing Society</span>
+                          <ArrowRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-emerald-400 transition" />
+                        </div>
+                        <p className="text-[11px] text-slate-400 mt-0.5">
+                          For Residents, Flat Owners, or Tenants requesting connection to their apartment flat.
+                        </p>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Mode: Register New Society Form */}
+              {unlinkedMode === "register" && (
+                <div className="space-y-3 animate-in fade-in-0">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <span className="font-bold text-xs text-indigo-300 flex items-center gap-1.5">
+                      <Building2 className="w-4 h-4" /> Quick Society Registration
                     </span>
+                    <button
+                      type="button"
+                      onClick={() => setUnlinkedMode("choose")}
+                      className="text-[10px] text-slate-400 hover:text-white"
+                    >
+                      Change
+                    </button>
                   </div>
 
                   <div className="space-y-2">
-                    <div className="space-y-1">
-                      <label className="text-[11px] font-semibold text-slate-300">
-                        Housing Society Name *
-                      </label>
-                      <Input
-                        type="text"
-                        placeholder="e.g. Green Valley CHS"
-                        value={requestSocietyName}
-                        onChange={(e) => setRequestSocietyName(e.target.value)}
-                        className="bg-slate-900 border-slate-700 text-xs text-white"
-                      />
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-semibold text-slate-300">Society Name *</label>
+                        <Input
+                          placeholder="e.g. Royal Palms CHS"
+                          value={regSocietyName}
+                          onChange={(e) => setRegSocietyName(e.target.value)}
+                          className="bg-slate-900 border-slate-700 text-xs text-white h-8"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-semibold text-slate-300">Unique Code *</label>
+                        <Input
+                          placeholder="e.g. RPCHS"
+                          value={regSocietyCode}
+                          onChange={(e) => setRegSocietyCode(e.target.value.toUpperCase())}
+                          className="bg-slate-900 border-slate-700 text-xs text-white font-mono uppercase h-8"
+                        />
+                      </div>
                     </div>
 
-                    <div className="space-y-1">
-                      <label className="text-[11px] font-semibold text-slate-300">
-                        Flat / Unit Number (Optional)
-                      </label>
-                      <Input
-                        type="text"
-                        placeholder="e.g. Flat 402, Wing B"
-                        value={requestUnitNumber}
-                        onChange={(e) => setRequestUnitNumber(e.target.value)}
-                        className="bg-slate-900 border-slate-700 text-xs text-white"
-                      />
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-semibold text-slate-300">City</label>
+                        <Input
+                          placeholder="e.g. Mumbai"
+                          value={regCity}
+                          onChange={(e) => setRegCity(e.target.value)}
+                          className="bg-slate-900 border-slate-700 text-xs text-white h-8"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-semibold text-slate-300">Your Initial Role</label>
+                        <select
+                          value={regRole}
+                          onChange={(e) => setRegRole(e.target.value)}
+                          className="w-full h-8 px-2 rounded-md bg-slate-900 border border-slate-700 text-xs text-white"
+                        >
+                          <option value="SOCIETY_ADMIN">Society Administrator</option>
+                          <option value="SECRETARY">Hon. Secretary</option>
+                          <option value="TREASURER">Treasurer / Accountant</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2 pt-1">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-semibold text-slate-400">Wings</label>
+                        <Input
+                          type="number"
+                          min="1"
+                          max="10"
+                          value={regWings}
+                          onChange={(e) => setRegWings(e.target.value)}
+                          className="bg-slate-900 border-slate-700 text-xs text-white h-8"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-semibold text-slate-400">Floors/Wing</label>
+                        <Input
+                          type="number"
+                          min="1"
+                          max="50"
+                          value={regFloors}
+                          onChange={(e) => setRegFloors(e.target.value)}
+                          className="bg-slate-900 border-slate-700 text-xs text-white h-8"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-semibold text-slate-400">Flats/Floor</label>
+                        <Input
+                          type="number"
+                          min="1"
+                          max="20"
+                          value={regUnitsPerFloor}
+                          onChange={(e) => setRegUnitsPerFloor(e.target.value)}
+                          className="bg-slate-900 border-slate-700 text-xs text-white h-8"
+                        />
+                      </div>
                     </div>
 
                     <Button
                       type="button"
-                      onClick={handleRequestAccess}
-                      disabled={isLoading || !requestSocietyName.trim()}
-                      className="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold h-10 gap-2 mt-2"
+                      onClick={handleRegisterSociety}
+                      disabled={isRegistering || !regSocietyName.trim() || !regSocietyCode.trim()}
+                      className="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold h-9 gap-2 mt-3"
                     >
-                      <Send className="w-3.5 h-3.5" />
-                      <span>Request Society Access</span>
+                      {isRegistering ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Provisioning Society...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-3.5 h-3.5" />
+                          <span>Create Society & Open Dashboard</span>
+                        </>
+                      )}
                     </Button>
                   </div>
                 </div>
               )}
+
+              {/* Mode: Join Existing Society Form */}
+              {unlinkedMode === "join" && (
+                <div className="space-y-3 animate-in fade-in-0">
+                  {requestSent ? (
+                    <div className="p-4 rounded-xl bg-emerald-950/60 border border-emerald-800 text-emerald-200 text-center space-y-2.5">
+                      <CheckCircle2 className="w-7 h-7 text-emerald-400 mx-auto" />
+                      <div className="font-bold text-xs">Access Request Dispatched</div>
+                      <p className="text-[11px] text-slate-300">
+                        Your society administrator will review and link your account. Once approved, click the button below to enter:
+                      </p>
+                      <div className="pt-2 flex flex-col gap-2">
+                        <Button
+                          type="button"
+                          onClick={handleCheckApproval}
+                          disabled={isLoading}
+                          className="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold h-9"
+                        >
+                          {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Check Approval Status"}
+                        </Button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setRequestSent(false);
+                            setUnlinkedMode("choose");
+                          }}
+                          className="text-[11px] text-slate-400 hover:text-white"
+                        >
+                          Back to Options
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                        <span className="font-bold text-xs text-emerald-300 flex items-center gap-1.5">
+                          <Users className="w-4 h-4" /> Request Flat Connection
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setUnlinkedMode("choose")}
+                          className="text-[10px] text-slate-400 hover:text-white"
+                        >
+                          Change
+                        </button>
+                      </div>
+
+                      <div className="space-y-2.5">
+                        {/* 1. Society Directory Selector */}
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-semibold text-slate-300">
+                            Select Registered Housing Society *
+                          </label>
+                          {isLoadingSocieties ? (
+                            <div className="flex items-center gap-2 p-2 rounded bg-slate-900 text-[11px] text-slate-400">
+                              <Loader2 className="w-3 h-3 animate-spin text-emerald-400" />
+                              <span>Loading registered societies...</span>
+                            </div>
+                          ) : societyList.length > 0 ? (
+                            <select
+                              value={selectedJoinSocietyId}
+                              onChange={(e) => setSelectedJoinSocietyId(e.target.value)}
+                              className="w-full h-8 px-2 rounded-md bg-slate-900 border border-slate-700 text-xs text-white"
+                            >
+                              {societyList.map((soc) => (
+                                <option key={soc.id} value={soc.id}>
+                                  {soc.name} ({soc.code}) &middot; {soc.city || "India"}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <Input
+                              type="text"
+                              placeholder="e.g. Green Valley CHS"
+                              value={requestSocietyName}
+                              onChange={(e) => setRequestSocietyName(e.target.value)}
+                              className="bg-slate-900 border-slate-700 text-xs text-white h-8"
+                            />
+                          )}
+                        </div>
+
+                        {/* 2. Flat / Unit Selector */}
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-semibold text-slate-300">
+                            Select Your Apartment / Flat *
+                          </label>
+                          {isLoadingUnits ? (
+                            <div className="flex items-center gap-2 p-2 rounded bg-slate-900 text-[11px] text-slate-400">
+                              <Loader2 className="w-3 h-3 animate-spin text-emerald-400" />
+                              <span>Loading building flats...</span>
+                            </div>
+                          ) : availableUnits.length > 0 ? (
+                            <select
+                              value={selectedUnitId}
+                              onChange={(e) => {
+                                setSelectedUnitId(e.target.value);
+                                const found = availableUnits.find((u) => u.id === e.target.value);
+                                if (found) setRequestUnitNumber(found.unit_number);
+                              }}
+                              className="w-full h-8 px-2 rounded-md bg-slate-900 border border-slate-700 text-xs text-white"
+                            >
+                              {availableUnits.map((u) => (
+                                <option key={u.id} value={u.id}>
+                                  Unit {u.unit_number} ({u.wing_name}) &mdash; {u.is_claimed ? "[Claimed]" : "[Available]"}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <Input
+                              type="text"
+                              placeholder="e.g. Flat 402, Wing B"
+                              value={requestUnitNumber}
+                              onChange={(e) => setRequestUnitNumber(e.target.value)}
+                              className="bg-slate-900 border-slate-700 text-xs text-white h-8"
+                            />
+                          )}
+                        </div>
+
+                        {/* 3. Role: Owner vs Tenant */}
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-semibold text-slate-300">Your Relationship</label>
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setRequestedRole("OWNER")}
+                              className={`py-1.5 px-2 rounded-lg text-xs font-semibold border transition ${
+                                requestedRole === "OWNER"
+                                  ? "bg-emerald-600/30 border-emerald-500 text-emerald-200"
+                                  : "bg-slate-900 border-slate-800 text-slate-400 hover:text-white"
+                              }`}
+                            >
+                              Flat Owner
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setRequestedRole("TENANT")}
+                              className={`py-1.5 px-2 rounded-lg text-xs font-semibold border transition ${
+                                requestedRole === "TENANT"
+                                  ? "bg-emerald-600/30 border-emerald-500 text-emerald-200"
+                                  : "bg-slate-900 border-slate-800 text-slate-400 hover:text-white"
+                              }`}
+                            >
+                              Tenant / Renter
+                            </button>
+                          </div>
+                        </div>
+
+                        <Button
+                          type="button"
+                          onClick={handleRequestAccess}
+                          disabled={isLoading || (!selectedJoinSocietyId && !requestSocietyName.trim()) || !requestUnitNumber}
+                          className="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold h-9 gap-2 mt-2"
+                        >
+                          <Send className="w-3.5 h-3.5" />
+                          <span>Submit Connection Request</span>
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Log out / Switch Account link */}
+              <div className="pt-2 text-center border-t border-slate-800/60">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await fetch("/api/auth/logout", { method: "POST" });
+                    window.location.href = "/login";
+                  }}
+                  className="text-[11px] text-slate-400 hover:text-rose-400 transition"
+                >
+                  Sign in with a different phone or email
+                </button>
+              </div>
             </div>
           )}
         </CardContent>
