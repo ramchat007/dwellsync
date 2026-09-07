@@ -7,6 +7,12 @@ if (process.env.NODE_ENV !== "production") {
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   outputFileTracingRoot: undefined,
+  webpack: (config, { dev }) => {
+    if (dev) {
+      config.cache = false;
+    }
+    return config;
+  },
 };
 
 export default nextConfig;
