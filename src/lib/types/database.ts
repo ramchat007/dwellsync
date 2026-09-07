@@ -141,7 +141,14 @@ export type AuditAction =
   | "NOTIFICATION_FAILED"
   | "NOTIFICATION_READ"
   | "NOTIFICATION_BROADCAST"
-  | "NOTIFICATION_PREFERENCES_UPDATED";
+  | "NOTIFICATION_PREFERENCES_UPDATED"
+  | "COMMITTEE_CREATED"
+  | "COMMITTEE_UPDATED"
+  | "COMMITTEE_DISSOLVED"
+  | "COMMITTEE_MEMBER_APPOINTED"
+  | "COMMITTEE_MEMBER_UPDATED"
+  | "COMMITTEE_MEMBER_RESIGNED"
+  | "COMMITTEE_MEMBER_REMOVED";
 
 export interface Profile {
   id: string;
@@ -638,10 +645,15 @@ export interface SocietyMeeting {
   duration_minutes?: number | null;
   status: MeetingStatus;
   minutes_document_id?: string | null;
+  committee_id?: string | null;
+  quorum_required?: number | null;
+  quorum_met?: boolean | null;
+  presiding_officer_id?: string | null;
   organized_by: string;
   created_at: string;
   updated_at: string;
   organizer?: Profile;
+  presiding_officer?: Profile;
   minutes_document?: SocietyDocument;
 }
 
@@ -845,6 +857,64 @@ export interface NotificationDelivery {
   notification?: Notification;
 }
 
+// ==========================================
+// PHASE 11: GOVERNANCE & ADMINISTRATION MODELS
+// ==========================================
 
+export type CommitteeType =
+  | "MANAGING_COMMITTEE"
+  | "SUB_COMMITTEE"
+  | "GRIEVANCE_COMMITTEE"
+  | "ELECTION_COMMITTEE"
+  | "OTHER";
 
+export type CommitteeStatus = "ACTIVE" | "EXPIRED" | "DISSOLVED";
 
+export type CommitteeMemberDesignation =
+  | "PRESIDENT"
+  | "VICE_PRESIDENT"
+  | "CHAIRMAN"
+  | "SECRETARY"
+  | "JOINT_SECRETARY"
+  | "TREASURER"
+  | "JOINT_TREASURER"
+  | "EXECUTIVE_MEMBER"
+  | "INVITEE";
+
+export type CommitteeMemberStatus = "ACTIVE" | "RESIGNED" | "REMOVED" | "EXPIRED";
+
+export interface Committee {
+  id: string;
+  society_id: string;
+  name: string;
+  committee_type: CommitteeType;
+  term_start_date: string;
+  term_end_date: string;
+  status: CommitteeStatus;
+  description?: string | null;
+  created_by?: string | null;
+  created_at: string;
+  updated_at: string;
+  creator?: Profile;
+  members?: CommitteeMember[];
+}
+
+export interface CommitteeMember {
+  id: string;
+  committee_id: string;
+  society_id: string;
+  user_id: string;
+  designation: CommitteeMemberDesignation;
+  appointed_at: string;
+  term_end_date?: string | null;
+  resigned_at?: string | null;
+  status: CommitteeMemberStatus;
+  voting_rights: boolean;
+  replaced_by_id?: string | null;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+  profile?: Profile;
+  committee?: Committee;
+  replaced_by?: CommitteeMember;
+}

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentIdentity } from "@/lib/auth/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { recordAuditLog } from "@/lib/auth/audit";
+import { validateResidentUnitAccess } from "@/lib/auth/units";
 import { CreateComplaintSchema } from "@/lib/validations/operations";
 
 export const dynamic = "force-dynamic";
@@ -109,6 +110,14 @@ export async function POST(req: Request) {
         if (occupiedUnit?.unit_id) {
           targetUnitId = occupiedUnit.unit_id;
         }
+      }
+    } else {
+      const isAuthorized = await validateResidentUnitAccess(societyId, userId, targetUnitId);
+      if (!isAuthorized) {
+        return NextResponse.json(
+          { error: "Unauthorized: You do not have an active relationship with this unit" },
+          { status: 403 }
+        );
       }
     }
 
