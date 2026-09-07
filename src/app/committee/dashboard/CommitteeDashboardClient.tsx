@@ -150,16 +150,16 @@ export function CommitteeDashboardClient({
               </Card>
             </Link>
 
-            <Link href={`/society/${sid}/society`}>
+            <Link href={`/society/${sid}/committees`}>
               <Card className="border-slate-200 hover:border-indigo-400 transition-all p-4 bg-white shadow-2xs group cursor-pointer">
                 <div className="flex items-center justify-between mb-2">
-                  <div className="p-2 rounded-lg bg-purple-50 text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-colors">
-                    <Settings className="w-4 h-4" />
+                  <div className="p-2 rounded-lg bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                    <Shield className="w-4 h-4" />
                   </div>
                   <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-600" />
                 </div>
-                <div className="font-bold text-xs text-slate-900">Society Settings</div>
-                <div className="text-[11px] text-slate-500 mt-0.5">Registration, bank info & rules</div>
+                <div className="font-bold text-xs text-slate-900">Committees & Governance</div>
+                <div className="text-[11px] text-slate-500 mt-0.5">Manage office bearers, tenure & rosters</div>
               </Card>
             </Link>
           </div>
@@ -168,23 +168,41 @@ export function CommitteeDashboardClient({
         {/* Right Column: Governance Modules */}
         <div className="md:col-span-5 space-y-4">
           <div className="text-xs font-bold text-slate-700 uppercase tracking-wide">
-            Governance Activity
+            Governance Administration
           </div>
 
           <Card className="border-slate-200 shadow-sm bg-white">
-            <CardHeader className="pb-2 border-b border-slate-100">
-              <CardTitle className="text-xs font-bold flex items-center gap-2 text-slate-900">
-                <Shield className="w-4 h-4 text-indigo-600" /> Managing Committee Oversight
+            <CardHeader className="pb-3 border-b border-slate-100">
+              <CardTitle className="text-xs font-bold flex items-center justify-between text-slate-900">
+                <span className="flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-indigo-600" /> Managing Committee
+                </span>
+                <Badge variant="outline" className="text-[10px] font-medium text-emerald-600 border-emerald-200">
+                  Active System
+                </Badge>
               </CardTitle>
+              <CardDescription className="text-[11px] text-slate-500">
+                Oversee constitutional bodies, office appointments and executive transitions.
+              </CardDescription>
             </CardHeader>
-            <CardContent className="pt-6 pb-8 text-center text-xs space-y-2">
-              <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-2">
-                <FileText className="w-5 h-5" />
+            <CardContent className="pt-4 pb-4 text-xs space-y-3">
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-lg border border-slate-100 dark:border-slate-800 space-y-1">
+                <div className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5 text-indigo-600" />
+                  Constitutional Committee Roster
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Manage President, Secretary, Treasurer, and executive members with temporal tenure tracking.
+                </p>
               </div>
-              <div className="font-bold text-slate-800">No governance activity yet.</div>
-              <p className="text-[11px] text-slate-400 max-w-xs mx-auto">
-                Governance features will appear here when configured.
-              </p>
+
+              <Link href={`/society/${sid}/committees`} className="block w-full">
+                <Button className="w-full text-xs font-medium gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white">
+                  <Shield className="w-3.5 h-3.5" />
+                  <span>Open Committee Management</span>
+                  <ArrowRight className="w-3.5 h-3.5 ml-auto" />
+                </Button>
+              </Link>
             </CardContent>
           </Card>
         </div>

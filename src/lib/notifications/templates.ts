@@ -151,6 +151,30 @@ export const NOTIFICATION_TEMPLATES: Record<NotificationType, NotificationTempla
     bodyTemplate: (p) => 'Official meeting minutes are now available for review.',
     actionUrlTemplate: () => '/resident/meetings',
   },
+  COMMITTEE_APPOINTED: {
+    category: 'GENERAL',
+    titleTemplate: (p) => 'Committee Appointment: ' + (p.committeeName || 'Managing Committee'),
+    bodyTemplate: (p) => 'You have been appointed as ' + (p.designation || 'Member') + ' of ' + (p.committeeName || 'the committee') + '.',
+    actionUrlTemplate: () => '/resident/committee',
+  },
+  COMMITTEE_MEMBER_REMOVED: {
+    category: 'GENERAL',
+    titleTemplate: (p) => 'Committee Roster Update: ' + (p.committeeName || 'Committee'),
+    bodyTemplate: (p) => 'Your appointment in ' + (p.committeeName || 'the committee') + ' has concluded.',
+    actionUrlTemplate: () => '/resident/committee',
+  },
+  COMMITTEE_MEMBER_RESIGNED: {
+    category: 'GENERAL',
+    titleTemplate: (p) => 'Resignation Recorded: ' + (p.committeeName || 'Committee'),
+    bodyTemplate: (p) => 'Your resignation from ' + (p.committeeName || 'the committee') + ' has been formally recorded.',
+    actionUrlTemplate: () => '/resident/committee',
+  },
+  COMMITTEE_DESIGNATION_CHANGED: {
+    category: 'GENERAL',
+    titleTemplate: (p) => 'Designation Updated: ' + (p.committeeName || 'Committee'),
+    bodyTemplate: (p) => 'Your designation in ' + (p.committeeName || 'the committee') + ' has been updated to ' + (p.designation || 'Officer') + '.',
+    actionUrlTemplate: () => '/resident/committee',
+  },
 
   // General & Broadcast
   SOCIETY_BROADCAST: {

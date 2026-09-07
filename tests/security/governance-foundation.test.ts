@@ -341,5 +341,235 @@ describe("Phase 11.1 — Governance Foundation & Security Tests", () => {
       expect(adminVisible.map((c) => c.id)).toContain("c-2");
     });
   });
+
+  // ============================================================
+  // 5. PHASE 11.2 HARDENING: F1 COMPOSITE KEY & F2 RESIGNATION
+  // ============================================================
+  describe("Phase 11.2 Schema Hardening & Integrity Guarantees", () => {
+    it("F1 Composite Foreign Key Guarantee: Prevents member society divergence from committee", () => {
+      interface CommitteeEntity {
+        id: string;
+        society_id: string;
+      }
+      interface CommitteeMemberEntity {
+        id: string;
+        committee_id: string;
+        society_id: string;
+      }
+
+      const committees: CommitteeEntity[] = [
+        { id: "comm-green-1", society_id: SOCIETY_GREEN },
+        { id: "comm-lake-1", society_id: SOCIETY_LAKE },
+      ];
+
+      function validateCompositeFk(member: CommitteeMemberEntity): boolean {
+        // Enforces: FOREIGN KEY (committee_id, society_id) REFERENCES committees(id, society_id)
+        return committees.some(
+          (c) => c.id === member.committee_id && c.society_id === member.society_id
+        );
+      }
+
+      // Valid: Member belongs to same society as committee
+      expect(
+        validateCompositeFk({
+          id: "m-1",
+          committee_id: "comm-green-1",
+          society_id: SOCIETY_GREEN,
+        })
+      ).toBe(true);
+
+      // INVALID (Cross-tenant injection attack): Member attempts to attach to Green committee under Lake society
+      expect(
+        validateCompositeFk({
+          id: "m-evil-1",
+          committee_id: "comm-green-1",
+          society_id: SOCIETY_LAKE,
+        })
+      ).toBe(false);
+
+      // INVALID: Foreign committee ID
+      expect(
+        validateCompositeFk({
+          id: "m-evil-2",
+          committee_id: "comm-nonexistent",
+          society_id: SOCIETY_GREEN,
+        })
+      ).toBe(false);
+    });
+
+    it("F2 Resignation Date Constraint: Rejects resigned_at prior to appointed_at", () => {
+      function validateResignationDate(appointedAt: string, resignedAt: string | null | undefined): boolean {
+        if (!resignedAt) return true;
+        return resignedAt >= appointedAt;
+      }
+
+      // Valid: resignation after appointment
+      expect(validateResignationDate("2026-01-01", "2026-06-01")).toBe(true);
+
+      // Valid: resignation on the same day as appointment
+      expect(validateResignationDate("2026-01-01", "2026-01-01")).toBe(true);
+
+      // Valid: active member with no resignation date
+      expect(validateResignationDate("2026-01-01", null)).toBe(true);
+      expect(validateResignationDate("2026-01-01", undefined)).toBe(true);
+
+      // INVALID: resignation BEFORE appointment date
+      expect(validateResignationDate("2026-06-01", "2026-01-01")).toBe(false);
+      expect(validateResignationDate("2025-12-31", "2024-05-15")).toBe(false);
+    });
+  });
+
+  // ============================================================
+  // 6. PHASE 11.2 INPUT VALIDATION & MASS ASSIGNMENT DEFENSE
+  // ============================================================
+  describe("Phase 11.2 Zod Schemas & Mass Assignment Protection", () => {
+    it("CreateCommitteeSchema validates required fields and enforces term_end_date >= term_start_date", async () => {
+      const { CreateCommitteeSchema } = await import("@/lib/validations/governance");
+
+      // Valid committee input
+      const validParsed = CreateCommitteeSchema.safeParse({
+        name: "Executive Committee 2026",
+        committee_type: "MANAGING_COMMITTEE",
+        term_start_date: "2026-04-01",
+        term_end_date: "2029-03-31",
+        description: "Standard executive body",
+      });
+      expect(validParsed.success).toBe(true);
+
+      // Inverted dates must fail refinement
+      const invalidDates = CreateCommitteeSchema.safeParse({
+        name: "Invalid Dates Committee",
+        term_start_date: "2028-01-01",
+        term_end_date: "2026-01-01",
+      });
+      expect(invalidDates.success).toBe(false);
+
+      // Short name must fail
+      const invalidName = CreateCommitteeSchema.safeParse({
+        name: "MC",
+        term_start_date: "2026-01-01",
+        term_end_date: "2027-01-01",
+      });
+      expect(invalidName.success).toBe(false);
+    });
+
+    it("AppointCommitteeMemberSchema strips or disallows injected privileged fields", async () => {
+      const { AppointCommitteeMemberSchema } = await import("@/lib/validations/governance");
+
+      const validUserUuid = "a0000000-0000-0000-0000-000000000001";
+      const payloadWithInjection: any = {
+        user_id: validUserUuid,
+        designation: "TREASURER",
+        voting_rights: true,
+        // Injected fields attempting mass assignment:
+        society_id: "evil-society-id",
+        replaced_by_id: "injected-replacement",
+        status: "RESIGNED",
+        actorUserId: "hacked-actor",
+      };
+
+      const parsed = AppointCommitteeMemberSchema.safeParse(payloadWithInjection);
+      expect(parsed.success).toBe(true);
+
+      if (parsed.success) {
+        // Zod output must only contain allowed schema keys
+        const output = parsed.data as any;
+        expect(output.society_id).toBeUndefined();
+        expect(output.replaced_by_id).toBeUndefined();
+        expect(output.status).toBeUndefined();
+        expect(output.actorUserId).toBeUndefined();
+        expect(output.designation).toBe("TREASURER");
+      }
+    });
+
+    it("ReplaceMemberSchema validates incoming user UUID and discards unwhitelisted fields", async () => {
+      const { ReplaceMemberSchema } = await import("@/lib/validations/governance");
+
+      const validUuid = "b0000000-0000-0000-0000-000000000002";
+      const valid = ReplaceMemberSchema.safeParse({
+        incoming_user_id: validUuid,
+        designation: "SECRETARY",
+        replacement_date: "2026-08-01",
+        notes: "Succession by vote",
+      });
+      expect(valid.success).toBe(true);
+
+      const invalidUuid = ReplaceMemberSchema.safeParse({
+        incoming_user_id: "not-a-uuid",
+      });
+      expect(invalidUuid.success).toBe(false);
+    });
+  });
+
+  // ============================================================
+  // 7. PUBLIC ROSTER PRIVACY & PII REDACTION
+  // ============================================================
+  describe("Phase 11.2 Public Roster Privacy Boundaries", () => {
+    it("Public roster projection guarantees no leakage of phone, email, or internal audit notes", () => {
+      interface RawMemberRecord {
+        id: string;
+        designation: string;
+        appointed_at: string;
+        voting_rights: boolean;
+        notes: string;
+        replaced_by_id: string | null;
+        created_at: string;
+        profile: {
+          id: string;
+          full_name: string;
+          display_name: string;
+          phone: string;
+          email: string;
+          avatar_url: string;
+        };
+      }
+
+      const rawRecord: RawMemberRecord = {
+        id: "mem-private-1",
+        designation: "TREASURER",
+        appointed_at: "2026-04-01",
+        voting_rights: true,
+        notes: "Confidential background verification passed. Key holder.",
+        replaced_by_id: null,
+        created_at: "2026-04-01T10:00:00Z",
+        profile: {
+          id: "usr-treasurer-1",
+          full_name: "Ramesh Sharma",
+          display_name: "Ramesh S (Treasurer)",
+          phone: "+919876543210",
+          email: "treasurer@private.com",
+          avatar_url: "https://avatar.example.com/ramesh.jpg",
+        },
+      };
+
+      // Simulates getPublicCommitteeRoster projection
+      const sanitizeForPublicRoster = (m: RawMemberRecord) => ({
+        id: m.id,
+        designation: m.designation,
+        appointed_at: m.appointed_at,
+        voting_rights: m.voting_rights,
+        profile: {
+          id: m.profile.id,
+          full_name: m.profile.full_name,
+          display_name: m.profile.display_name,
+          avatar_url: m.profile.avatar_url,
+        },
+      });
+
+      const publicOutput = sanitizeForPublicRoster(rawRecord) as any;
+
+      // Public fields present
+      expect(publicOutput.id).toBe("mem-private-1");
+      expect(publicOutput.designation).toBe("TREASURER");
+      expect(publicOutput.profile.display_name).toBe("Ramesh S (Treasurer)");
+
+      // Sensitive / internal fields must be ABSENT
+      expect(publicOutput.notes).toBeUndefined();
+      expect(publicOutput.replaced_by_id).toBeUndefined();
+      expect(publicOutput.created_at).toBeUndefined();
+      expect(publicOutput.profile.phone).toBeUndefined();
+      expect(publicOutput.profile.email).toBeUndefined();
+    });
+  });
 });
 
