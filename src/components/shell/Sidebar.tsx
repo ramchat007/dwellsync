@@ -27,6 +27,7 @@ import {
   MessageSquare,
   Sparkles,
   Bell,
+  ShieldCheck,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -49,6 +50,8 @@ const ICON_MAP: Record<string, React.ElementType> = {
   MessageSquare,
   Sparkles,
   Bell,
+  Shield,
+  ShieldCheck,
 };
 
 export function Sidebar({ className }: { className?: string }) {

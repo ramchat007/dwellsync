@@ -279,6 +279,29 @@ export async function updateCommittee(
     return { committee: null, error: "Term end date cannot be earlier than term start date" };
   }
 
+  // F11.2-01: Controlled application pre-check when reactivating a Managing Committee
+  if (
+    input.status === "ACTIVE" &&
+    existing.committee_type === "MANAGING_COMMITTEE" &&
+    existing.status !== "ACTIVE"
+  ) {
+    const { data: existingActive } = await adminClient
+      .from("committees")
+      .select("id, name")
+      .eq("society_id", input.societyId)
+      .eq("committee_type", "MANAGING_COMMITTEE")
+      .eq("status", "ACTIVE")
+      .neq("id", input.committeeId)
+      .maybeSingle();
+
+    if (existingActive) {
+      return {
+        committee: null,
+        error: `Cannot reactivate this Managing Committee. An active Managing Committee ("${existingActive.name}") already exists for this society. Conclude or dissolve the existing active committee first.`,
+      };
+    }
+  }
+
   const updates: Record<string, any> = {
     updated_at: new Date().toISOString(),
   };
@@ -764,6 +787,20 @@ export async function replaceCommitteeMember(
     .from("committee_members")
     .update({ replaced_by_id: appointRes.member.id })
     .eq("id", outgoing.id);
+
+  // F11.2-03: Dispatch removal/replacement notification to outgoing member
+  try {
+    await sendDomainNotification({
+      societyId: input.societyId,
+      type: "COMMITTEE_MEMBER_REMOVED",
+      recipientIds: [outgoing.user_id],
+      data: {
+        committeeName: outgoing.committee?.name || "Committee",
+      },
+    });
+  } catch (notifErr) {
+    console.warn("[GovernanceService] Notification delivery warning for replaced outgoing member:", notifErr);
+  }
 
   return { newMember: appointRes.member };
 }

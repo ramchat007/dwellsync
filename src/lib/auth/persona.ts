@@ -181,13 +181,15 @@ export function getNavigationForRole(
   if (role === "SOCIETY_ADMIN") {
     return [
       { label: "Dashboard", href: `/society/${sid}/dashboard`, iconName: "LayoutDashboard" },
+      { label: "Committees", href: `/society/${sid}/committees`, iconName: "Shield" },
+      { label: "Meetings & Proceedings", href: `/society/${sid}/meetings`, iconName: "Calendar" },
       { label: "Buildings & Wings", href: `/society/${sid}/buildings`, iconName: "Building2" },
       { label: "Units & Flats", href: `/society/${sid}/units`, iconName: "DoorOpen" },
       { label: "People Directory", href: `/society/${sid}/people`, iconName: "Users" },
       { label: "Complaints & Helpdesk", href: `/society/${sid}/complaints`, iconName: "MessageSquare" },
       { label: "Billing & Invoices", href: `/society/${sid}/billing`, iconName: "Receipt" },
       { label: "Amenities", href: `/society/${sid}/amenities`, iconName: "Sparkles" },
-      { label: "Events & Meetings", href: `/society/${sid}/events`, iconName: "Calendar" },
+      { label: "Events & Gatherings", href: `/society/${sid}/events`, iconName: "Calendar" },
       { label: "Notices", href: `/society/${sid}/notices`, iconName: "Bell" },
       { label: "Documents", href: `/society/${sid}/documents`, iconName: "FileText" },
       { label: "Society Settings", href: `/society/${sid}/society`, iconName: "Settings" },
@@ -198,11 +200,13 @@ export function getNavigationForRole(
   if (role === "COMMITTEE_MEMBER" || role === "SECRETARY") {
     return [
       { label: "Committee Hub", href: "/committee/dashboard", iconName: "LayoutDashboard" },
+      { label: "Committees", href: `/society/${sid}/committees`, iconName: "Shield" },
+      { label: "Meetings & Proceedings", href: `/society/${sid}/meetings`, iconName: "Calendar" },
       { label: "Buildings & Layout", href: `/society/${sid}/buildings`, iconName: "Building2" },
       { label: "Units Directory", href: `/society/${sid}/units`, iconName: "DoorOpen" },
       { label: "Members Roster", href: `/society/${sid}/people`, iconName: "Users" },
       { label: "Complaints", href: `/society/${sid}/complaints`, iconName: "MessageSquare" },
-      { label: "Events & Meetings", href: `/society/${sid}/events`, iconName: "Calendar" },
+      { label: "Events", href: `/society/${sid}/events`, iconName: "Calendar" },
       { label: "Notices", href: `/society/${sid}/notices`, iconName: "Bell" },
       { label: "Documents", href: `/society/${sid}/documents`, iconName: "FileText" },
       { label: "Society Profile", href: `/society/${sid}/society`, iconName: "Settings" },
@@ -225,6 +229,8 @@ export function getNavigationForRole(
   if (role === "RESIDENT" || role === "OWNER" || role === "TENANT") {
     return [
       { label: "My Home", href: "/resident/dashboard", iconName: "LayoutDashboard" },
+      { label: "General Meetings", href: "/resident/meetings", iconName: "Calendar" },
+      { label: "Committee Roster", href: "/resident/committee", iconName: "ShieldCheck" },
       { label: "Dues & Invoices", href: "/resident/dues", iconName: "Receipt" },
       { label: "Gate Passes", href: "/resident/visitors", iconName: "ShieldAlert" },
       { label: "Complaints", href: "/resident/complaints", iconName: "MessageSquare" },

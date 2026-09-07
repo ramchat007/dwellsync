@@ -621,6 +621,7 @@ export type MeetingType =
   | "AGM"
   | "EGM"
   | "MANAGING_COMMITTEE"
+  | "SUB_COMMITTEE"
   | "VENDOR"
   | "GENERAL";
 
@@ -652,9 +653,14 @@ export interface SocietyMeeting {
   organized_by: string;
   created_at: string;
   updated_at: string;
-  organizer?: Profile;
-  presiding_officer?: Profile;
+  organizer?: Profile | null;
+  presiding_officer?: Profile | null;
   minutes_document?: SocietyDocument;
+  committee?: Committee | null;
+  agendas?: MeetingAgenda[];
+  attendees?: MeetingAttendee[];
+  minutes?: MeetingMinutes | null;
+  action_items?: MeetingActionItem[];
 }
 
 // ==========================================
@@ -918,3 +924,74 @@ export interface CommitteeMember {
   committee?: Committee;
   replaced_by?: CommitteeMember;
 }
+
+// ==========================================
+// PHASE 11.3: GOVERNANCE COMMITTEE MEETINGS & PROCEEDINGS
+// ==========================================
+
+export type AgendaStatus = "PENDING" | "DISCUSSED" | "DEFERRED";
+
+export type AttendeeType = "MEMBER" | "INVITEE" | "SPECIAL_GUEST";
+
+export type MinutesStatus = "DRAFT" | "PUBLISHED";
+
+export type ActionItemStatus = "OPEN" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+
+export interface MeetingAgenda {
+  id: string;
+  society_id: string;
+  meeting_id: string;
+  item_order: number;
+  title: string;
+  description?: string | null;
+  presenter?: string | null;
+  duration_minutes?: number | null;
+  status: AgendaStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MeetingAttendee {
+  id: string;
+  society_id: string;
+  meeting_id: string;
+  user_id: string;
+  attendee_type: AttendeeType;
+  attended: boolean;
+  status?: "PRESENT" | "ABSENT" | "EXCUSED";
+  marked_at: string;
+  notes?: string | null;
+  profile?: Profile;
+}
+
+export interface MeetingMinutes {
+  id: string;
+  society_id: string;
+  meeting_id: string;
+  content_summary: string;
+  decisions_summary?: string | null;
+  recorded_by: string;
+  status: MinutesStatus;
+  published_at?: string | null;
+  published_by?: string | null;
+  created_at: string;
+  updated_at: string;
+  recorder?: Profile;
+  publisher?: Profile;
+}
+
+export interface MeetingActionItem {
+  id: string;
+  society_id: string;
+  meeting_id: string;
+  title: string;
+  description?: string | null;
+  assigned_to?: string | null;
+  due_date?: string | null;
+  status: ActionItemStatus;
+  completed_at?: string | null;
+  created_at: string;
+  updated_at: string;
+  assignee?: Profile | null;
+}
+

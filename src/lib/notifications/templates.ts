@@ -133,6 +133,12 @@ export const NOTIFICATION_TEMPLATES: Record<NotificationType, NotificationTempla
     bodyTemplate: (p) => 'Meeting scheduled on ' + (p.date || '') + '. Agenda: ' + (p.agenda || 'General discussion') + '.',
     actionUrlTemplate: () => '/resident/meetings',
   },
+  MEETING_SCHEDULED: {
+    category: 'GENERAL',
+    titleTemplate: (p) => 'Meeting Scheduled: ' + (p.meetingTitle || 'Meeting'),
+    bodyTemplate: (p) => 'Meeting scheduled on ' + (p.date || '') + '. Agenda: ' + (p.agenda || 'General discussion') + '.',
+    actionUrlTemplate: () => '/resident/meetings',
+  },
   MEETING_UPDATED: {
     category: 'GENERAL',
     titleTemplate: (p) => 'Meeting Updated: ' + (p.meetingTitle || 'Meeting'),
@@ -149,6 +155,12 @@ export const NOTIFICATION_TEMPLATES: Record<NotificationType, NotificationTempla
     category: 'GENERAL',
     titleTemplate: (p) => 'Meeting Minutes Published: ' + (p.meetingTitle || ''),
     bodyTemplate: (p) => 'Official meeting minutes are now available for review.',
+    actionUrlTemplate: () => '/resident/meetings',
+  },
+  ACTION_ITEM_ASSIGNED: {
+    category: 'GENERAL',
+    titleTemplate: (p) => 'Action Item Assigned: ' + (p.itemTitle || 'Task'),
+    bodyTemplate: (p) => 'You have been assigned an action item: ' + (p.itemTitle || '') + (p.dueDate ? ' (Due: ' + p.dueDate + ')' : '') + '.',
     actionUrlTemplate: () => '/resident/meetings',
   },
   COMMITTEE_APPOINTED: {

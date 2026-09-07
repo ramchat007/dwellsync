@@ -162,6 +162,19 @@ export function CommitteeDashboardClient({
                 <div className="text-[11px] text-slate-500 mt-0.5">Manage office bearers, tenure & rosters</div>
               </Card>
             </Link>
+
+            <Link href={`/society/${sid}/meetings`}>
+              <Card className="border-slate-200 hover:border-indigo-400 transition-all p-4 bg-white shadow-2xs group cursor-pointer">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="p-2 rounded-lg bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                    <Calendar className="w-4 h-4" />
+                  </div>
+                  <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-600" />
+                </div>
+                <div className="font-bold text-xs text-slate-900">Meetings & Proceedings</div>
+                <div className="text-[11px] text-slate-500 mt-0.5">Schedule meetings, agendas, quorum & minutes</div>
+              </Card>
+            </Link>
           </div>
         </div>
 
@@ -196,13 +209,23 @@ export function CommitteeDashboardClient({
                 </p>
               </div>
 
-              <Link href={`/society/${sid}/committees`} className="block w-full">
-                <Button className="w-full text-xs font-medium gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white">
-                  <Shield className="w-3.5 h-3.5" />
-                  <span>Open Committee Management</span>
-                  <ArrowRight className="w-3.5 h-3.5 ml-auto" />
-                </Button>
-              </Link>
+              <div className="flex flex-col gap-2">
+                <Link href={`/society/${sid}/committees`} className="block w-full">
+                  <Button className="w-full text-xs font-medium gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white">
+                    <Shield className="w-3.5 h-3.5" />
+                    <span>Open Committee Management</span>
+                    <ArrowRight className="w-3.5 h-3.5 ml-auto" />
+                  </Button>
+                </Link>
+
+                <Link href={`/society/${sid}/meetings`} className="block w-full">
+                  <Button variant="outline" className="w-full text-xs font-medium gap-1.5 border-slate-300 hover:bg-slate-50">
+                    <Calendar className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>Meetings & Proceedings Workspace</span>
+                    <ArrowRight className="w-3.5 h-3.5 ml-auto" />
+                  </Button>
+                </Link>
+              </div>
             </CardContent>
           </Card>
         </div>

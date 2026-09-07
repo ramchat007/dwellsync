@@ -1,46 +1,36 @@
 import { NextResponse } from "next/server";
 import { requireSocietyAccess } from "@/lib/auth/server";
 import { roleHasPermission, PERMISSIONS } from "@/lib/auth/permissions";
-import { CreateGovernanceMeetingSchema } from "@/lib/validations/governance";
-import { getMeetings, scheduleMeeting } from "@/lib/governance/meetingService";
-import { MeetingType, MeetingStatus } from "@/lib/types/database";
+import { UpdateGovernanceMeetingSchema } from "@/lib/validations/governance";
+import { getMeetingDetail, updateMeeting } from "@/lib/governance/meetingService";
 
 export const dynamic = "force-dynamic";
 
-/**
- * GET /api/society/[societyId]/meetings
- * Lists society & committee meetings with permission filtering.
- */
 export async function GET(
   req: Request,
-  context: { params: Promise<{ societyId: string }> }
+  context: { params: Promise<{ societyId: string; meetingId: string }> }
 ) {
   try {
-    const { societyId } = await context.params;
+    const { societyId, meetingId } = await context.params;
     const { identity } = await requireSocietyAccess(societyId);
 
     if (!roleHasPermission(identity.currentRole, PERMISSIONS.MEETINGS_VIEW)) {
       return NextResponse.json({ error: "Forbidden: Insufficient permissions" }, { status: 403 });
     }
 
-    const { searchParams } = new URL(req.url);
-    const committeeId = searchParams.get("committeeId") || undefined;
-    const meetingType = (searchParams.get("type") as MeetingType) || undefined;
-    const status = (searchParams.get("status") as MeetingStatus) || undefined;
-
-    // Ordinary residents only see public meetings
     const isManagement = roleHasPermission(identity.currentRole, PERMISSIONS.MEETINGS_MANAGE);
 
-    const meetings = await getMeetings(societyId, {
-      committeeId,
-      meetingType,
-      status,
+    const meeting = await getMeetingDetail(societyId, meetingId, {
       includePrivate: isManagement,
     });
 
-    return NextResponse.json({ success: true, meetings });
+    if (!meeting) {
+      return NextResponse.json({ error: "Meeting not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true, meeting });
   } catch (err: any) {
-    console.error("[API/society/meetings/GET] Exception:", err);
+    console.error("[API/meetings/detail/GET] Exception:", err);
     return NextResponse.json(
       { error: err?.message || "Internal Server Error" },
       { status: 500 }
@@ -48,16 +38,12 @@ export async function GET(
   }
 }
 
-/**
- * POST /api/society/[societyId]/meetings
- * Schedules a new governance meeting (requires MEETINGS_MANAGE).
- */
-export async function POST(
+export async function PATCH(
   req: Request,
-  context: { params: Promise<{ societyId: string }> }
+  context: { params: Promise<{ societyId: string; meetingId: string }> }
 ) {
   try {
-    const { societyId } = await context.params;
+    const { societyId, meetingId } = await context.params;
     const { identity } = await requireSocietyAccess(societyId);
 
     if (!roleHasPermission(identity.currentRole, PERMISSIONS.MEETINGS_MANAGE)) {
@@ -65,7 +51,7 @@ export async function POST(
     }
 
     const body = await req.json();
-    const parsed = CreateGovernanceMeetingSchema.safeParse(body);
+    const parsed = UpdateGovernanceMeetingSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
         { error: "Validation failed", details: parsed.error.flatten() },
@@ -73,18 +59,18 @@ export async function POST(
       );
     }
 
-    const result = await scheduleMeeting({
+    const result = await updateMeeting({
       societyId,
+      meetingId,
       title: parsed.data.title,
-      meetingType: parsed.data.meeting_type,
-      committeeId: parsed.data.committee_id,
-      presidingOfficerId: parsed.data.presiding_officer_id,
       scheduledAt: parsed.data.scheduled_at,
       durationMinutes: parsed.data.duration_minutes,
       locationType: parsed.data.location_type,
       locationDetails: parsed.data.location_details,
       meetingLink: parsed.data.meeting_link,
+      presidingOfficerId: parsed.data.presiding_officer_id,
       quorumRequired: parsed.data.quorum_required,
+      status: parsed.data.status,
       agenda: parsed.data.agenda,
       actorUserId: identity.originalUser.id,
       effectiveUserId: identity.effectiveUser.id,
@@ -92,14 +78,14 @@ export async function POST(
 
     if (result.error || !result.meeting) {
       return NextResponse.json(
-        { error: result.error || "Failed to schedule meeting" },
+        { error: result.error || "Failed to update meeting" },
         { status: 400 }
       );
     }
 
-    return NextResponse.json({ success: true, meeting: result.meeting }, { status: 201 });
+    return NextResponse.json({ success: true, meeting: result.meeting });
   } catch (err: any) {
-    console.error("[API/society/meetings/POST] Exception:", err);
+    console.error("[API/meetings/detail/PATCH] Exception:", err);
     return NextResponse.json(
       { error: err?.message || "Internal Server Error" },
       { status: 500 }
