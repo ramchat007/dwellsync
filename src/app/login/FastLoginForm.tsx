@@ -114,9 +114,7 @@ export function FastLoginForm() {
           const data = await res.json();
           if (res.ok && data.societies) {
             setSocietyList(data.societies);
-            if (data.societies.length > 0 && !selectedJoinSocietyId) {
-              setSelectedJoinSocietyId(data.societies[0].id);
-            }
+            setSelectedJoinSocietyId((prev) => prev || (data.societies.length > 0 ? data.societies[0].id : ""));
           }
         } catch (err) {
           console.error("Failed to load societies:", err);

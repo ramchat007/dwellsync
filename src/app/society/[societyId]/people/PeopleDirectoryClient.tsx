@@ -66,7 +66,7 @@ export function PeopleDirectoryClient({
   const [isLoadingRequests, setIsLoadingRequests] = useState(false);
   const [processingRequestId, setProcessingRequestId] = useState<string | null>(null);
 
-  const fetchAccessRequests = async () => {
+  const fetchAccessRequests = React.useCallback(async () => {
     try {
       setIsLoadingRequests(true);
       const res = await fetch(`/api/society/${societyId}/access-requests`);
@@ -79,11 +79,11 @@ export function PeopleDirectoryClient({
     } finally {
       setIsLoadingRequests(false);
     }
-  };
+  }, [societyId]);
 
   React.useEffect(() => {
     fetchAccessRequests();
-  }, [societyId]);
+  }, [fetchAccessRequests]);
 
   const handleApproveRequest = async (requestId: string, role: string) => {
     try {
