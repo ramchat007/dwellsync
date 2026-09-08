@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "fix:git": "node scripts/fix-git-index.js",
     "seed:dev": "tsx scripts/seed-dev.ts",
     "bootstrap:superadmin": "tsx scripts/bootstrap-superadmin.ts"
   },
