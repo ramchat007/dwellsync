@@ -28,6 +28,7 @@ BEGIN
       FOREIGN KEY (committee_id, society_id)
       REFERENCES public.committees(id, society_id)
       ON DELETE SET NULL;
+      ON DELETE RESTRICT;
   END IF;
 END $$;
 

@@ -15,6 +15,11 @@ export async function PATCH(
     const { identity } = await requireSocietyAccess(societyId);
 
     const isManagement = roleHasPermission(identity.currentRole, PERMISSIONS.MEETINGS_MANAGE);
+    const canView = roleHasPermission(identity.currentRole, PERMISSIONS.MEETINGS_VIEW);
+
+    if (!isManagement && !canView) {
+      return NextResponse.json({ error: "Forbidden: Insufficient permissions" }, { status: 403 });
+    }
 
     const body = await req.json();
     const parsed = UpdateActionItemSchema.safeParse(body);
@@ -43,9 +48,10 @@ export async function PATCH(
     });
 
     if (result.error || !result.actionItem) {
+      const status = result.error?.toLowerCase().includes("forbidden") ? 403 : 400;
       return NextResponse.json(
         { error: result.error || "Failed to update action item" },
-        { status: 400 }
+        { status }
       );
     }
 

@@ -10,6 +10,11 @@ import {
   CommitteeType,
   CommitteeMemberDesignation,
 } from "@/lib/types/database";
+import {
+  CreateCommitteeSchema,
+  AppointCommitteeMemberSchema,
+  ReplaceMemberSchema,
+} from "@/lib/validations/governance";
 
 /**
  * Phase 11.1 Security Test Suite: Governance Foundation & Administration
@@ -423,9 +428,7 @@ describe("Phase 11.1 — Governance Foundation & Security Tests", () => {
   // 6. PHASE 11.2 INPUT VALIDATION & MASS ASSIGNMENT DEFENSE
   // ============================================================
   describe("Phase 11.2 Zod Schemas & Mass Assignment Protection", () => {
-    it("CreateCommitteeSchema validates required fields and enforces term_end_date >= term_start_date", async () => {
-      const { CreateCommitteeSchema } = await import("@/lib/validations/governance");
-
+    it("CreateCommitteeSchema validates required fields and enforces term_end_date >= term_start_date", () => {
       // Valid committee input
       const validParsed = CreateCommitteeSchema.safeParse({
         name: "Executive Committee 2026",
@@ -453,9 +456,7 @@ describe("Phase 11.1 — Governance Foundation & Security Tests", () => {
       expect(invalidName.success).toBe(false);
     });
 
-    it("AppointCommitteeMemberSchema strips or disallows injected privileged fields", async () => {
-      const { AppointCommitteeMemberSchema } = await import("@/lib/validations/governance");
-
+    it("AppointCommitteeMemberSchema strips or disallows injected privileged fields", () => {
       const validUserUuid = "a0000000-0000-0000-0000-000000000001";
       const payloadWithInjection: any = {
         user_id: validUserUuid,
@@ -482,9 +483,7 @@ describe("Phase 11.1 — Governance Foundation & Security Tests", () => {
       }
     });
 
-    it("ReplaceMemberSchema validates incoming user UUID and discards unwhitelisted fields", async () => {
-      const { ReplaceMemberSchema } = await import("@/lib/validations/governance");
-
+    it("ReplaceMemberSchema validates incoming user UUID and discards unwhitelisted fields", () => {
       const validUuid = "b0000000-0000-0000-0000-000000000002";
       const valid = ReplaceMemberSchema.safeParse({
         incoming_user_id: validUuid,

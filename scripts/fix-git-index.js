@@ -30,3 +30,4 @@ try {
   console.error("[fix-git] Failed to rebuild git index:", err.message);
   process.exit(1);
 }
+

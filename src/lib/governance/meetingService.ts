@@ -578,6 +578,17 @@ export async function updateMeetingAgenda(
 ): Promise<{ agenda: MeetingAgenda | null; error?: string }> {
   const adminClient = createAdminClient();
 
+  const { data: meeting } = await adminClient
+    .from("society_meetings")
+    .select("id, status")
+    .eq("id", input.meetingId)
+    .eq("society_id", input.societyId)
+    .maybeSingle();
+
+  if (!meeting) {
+    return { agenda: null, error: "Meeting not found in this society" };
+  }
+
   const updates: Record<string, any> = {
     updated_at: new Date().toISOString(),
   };
@@ -677,7 +688,8 @@ export async function recordMeetingAttendance(
     .eq("attended", true);
 
   const attendedCount = attendedCountRaw || 0;
-  const quorumMet = attendedCount >= meeting.quorum_required;
+  const quorumRequired = meeting.quorum_required ?? 0;
+  const quorumMet = quorumRequired === 0 || attendedCount >= quorumRequired;
 
   // Persist updated quorum_met on society_meetings
   await adminClient
@@ -966,9 +978,15 @@ export async function updateMeetingActionItem(
     return { actionItem: null, error: "Action item not found in this meeting and society" };
   }
 
-  // If user is only assignee, they can only update status
-  if (input.isAssigneeOnly && (input.title || input.assignedTo || input.dueDate)) {
-    return { actionItem: null, error: "Assignees may only update task progress status" };
+  // If caller is non-management assignee, enforce that they are indeed the assigned user and updating status only
+  if (input.isAssigneeOnly) {
+    const callerId = input.effectiveUserId || input.actorUserId;
+    if (existing.assigned_to !== callerId) {
+      return { actionItem: null, error: "Forbidden: You are not assigned to this action item" };
+    }
+    if (input.title || input.assignedTo || input.dueDate) {
+      return { actionItem: null, error: "Assignees may only update task progress status" };
+    }
   }
 
   // Validate assignee if changed

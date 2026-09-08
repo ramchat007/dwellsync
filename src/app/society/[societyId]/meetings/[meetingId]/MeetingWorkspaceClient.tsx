@@ -111,7 +111,7 @@ export function MeetingWorkspaceClient({
   });
   const [submittingAction, setSubmittingAction] = useState(false);
 
-  const isManagement = ["SUPER_ADMIN", "SOCIETY_ADMIN", "SECRETARY", "CHAIRMAN", "TREASURER"].includes(userRole);
+  const isManagement = ["SUPER_ADMIN", "SOCIETY_ADMIN", "SECRETARY"].includes(userRole);
   const isTerminal = meeting.status === "COMPLETED" || meeting.status === "CANCELLED";
   const isMinutesPublished = minutes?.status === "PUBLISHED";
 
