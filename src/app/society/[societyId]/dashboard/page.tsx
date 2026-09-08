@@ -1,6 +1,7 @@
 import React from "react";
 import Link from "next/link";
-import { requireSocietyAccess } from "@/lib/auth/server";
+import { requireSocietyAccess, roleHasPermission } from "@/lib/auth/server";
+import { PERMISSIONS } from "@/lib/auth/permissions";
 import { getSocietyMetrics } from "@/lib/services/societyService";
 import {
   Building2,
@@ -15,6 +16,7 @@ import {
   Sparkles,
   UserPlus,
   Send,
+  BarChart3,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -44,6 +46,13 @@ export default async function SocietyDashboardPage({
         }
         actions={
           <div className="flex items-center gap-2">
+            {roleHasPermission(identity.currentRole, PERMISSIONS.ANALYTICS_VIEW) && (
+              <Link href={`/society/${societyId}/analytics`}>
+                <Button variant="outline" size="sm" className="text-xs gap-1.5 border-slate-300">
+                  <BarChart3 className="w-3.5 h-3.5 text-indigo-600" /> Analytics & Reports
+                </Button>
+              </Link>
+            )}
             <Link href={`/society/${societyId}/buildings`}>
               <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs gap-1.5 shadow">
                 <Plus className="w-3.5 h-3.5" /> Manage Buildings & Units

@@ -27,7 +27,6 @@ BEGIN
       ADD CONSTRAINT fk_society_meetings_committee_society
       FOREIGN KEY (committee_id, society_id)
       REFERENCES public.committees(id, society_id)
-      ON DELETE SET NULL;
       ON DELETE RESTRICT;
   END IF;
 END $$;
@@ -291,3 +290,21 @@ CREATE POLICY "Admins, secretaries, and assignees can update action items"
     OR public.has_society_role(auth.uid(), meeting_action_items.society_id, ARRAY['SOCIETY_ADMIN', 'SECRETARY'])
     OR assigned_to = auth.uid()
   );
+
+-- ============================================================================
+-- 6.5 HARDEN SOCIETY_MEETINGS RLS (COMMITTEE_MEMBER RBAC RESTRICTION)
+-- ============================================================================
+
+DROP POLICY IF EXISTS "Admins and committee can manage meetings" ON public.society_meetings;
+DROP POLICY IF EXISTS "Admins and secretaries can manage meetings" ON public.society_meetings;
+CREATE POLICY "Admins and secretaries can manage meetings"
+  ON public.society_meetings FOR ALL
+  USING (
+    public.is_super_admin(auth.uid())
+    OR public.has_society_role(auth.uid(), society_meetings.society_id, ARRAY['SOCIETY_ADMIN', 'SECRETARY'])
+  )
+  WITH CHECK (
+    public.is_super_admin(auth.uid())
+    OR public.has_society_role(auth.uid(), society_meetings.society_id, ARRAY['SOCIETY_ADMIN', 'SECRETARY'])
+  );
+

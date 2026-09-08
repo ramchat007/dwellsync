@@ -28,6 +28,7 @@ import {
   Sparkles,
   Bell,
   ShieldCheck,
+  BarChart3,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -52,6 +53,7 @@ const ICON_MAP: Record<string, React.ElementType> = {
   Bell,
   Shield,
   ShieldCheck,
+  BarChart3,
 };
 
 export function Sidebar({ className }: { className?: string }) {

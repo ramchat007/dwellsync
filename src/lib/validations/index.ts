@@ -11,6 +11,9 @@ export * from "./invitation";
 export * from "./visitor";
 export * from "./operations";
 export * from "./billing";
-
-
 export * from "./notifications";
+export * from "./governance";
+export * from "./analytics";
+
+// Explicitly disambiguate duplicate exports between operations and governance
+export { MeetingLocationTypeEnum, MeetingTypeEnum } from "./governance";

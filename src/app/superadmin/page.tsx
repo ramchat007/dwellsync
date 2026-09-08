@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   Activity,
+  BarChart3,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -50,6 +51,11 @@ export default async function SuperAdminDashboardPage() {
         }
         actions={
           <div className="flex items-center gap-2">
+            <Link href="/superadmin/analytics">
+              <button className="px-3.5 py-2 bg-purple-700 hover:bg-purple-600 text-white rounded-lg text-xs font-semibold shadow transition-all flex items-center gap-1.5">
+                <BarChart3 className="w-4 h-4" /> Platform Analytics
+              </button>
+            </Link>
             <Link href="/superadmin/view-as">
               <button className="px-3.5 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-semibold shadow transition-all flex items-center gap-1.5">
                 <UserCheck className="w-4 h-4" /> View-As Persona Console

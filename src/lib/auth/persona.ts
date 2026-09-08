@@ -17,6 +17,7 @@ import {
   UserCheck,
   Calendar,
   CheckSquare,
+  BarChart3,
 } from "lucide-react";
 
 export interface NavItem {
@@ -171,6 +172,7 @@ export function getNavigationForRole(
     return [
       { label: "View-As Console", href: "/superadmin/view-as", iconName: "UserCheck" },
       { label: "Platform Overview", href: "/superadmin", iconName: "LayoutDashboard" },
+      { label: "Platform Analytics", href: "/superadmin/analytics", iconName: "BarChart3" },
       { label: "Societies Registry", href: "/superadmin/societies", iconName: "Building2" },
       { label: "Platform Users", href: "/superadmin/users", iconName: "Users" },
       { label: "Audit Ledger", href: "/superadmin/audit", iconName: "Activity" },
@@ -181,6 +183,7 @@ export function getNavigationForRole(
   if (role === "SOCIETY_ADMIN") {
     return [
       { label: "Dashboard", href: `/society/${sid}/dashboard`, iconName: "LayoutDashboard" },
+      { label: "Analytics & Reports", href: `/society/${sid}/analytics`, iconName: "BarChart3" },
       { label: "Committees", href: `/society/${sid}/committees`, iconName: "Shield" },
       { label: "Meetings & Proceedings", href: `/society/${sid}/meetings`, iconName: "Calendar" },
       { label: "Buildings & Wings", href: `/society/${sid}/buildings`, iconName: "Building2" },
@@ -200,6 +203,7 @@ export function getNavigationForRole(
   if (role === "COMMITTEE_MEMBER" || role === "SECRETARY") {
     return [
       { label: "Committee Hub", href: "/committee/dashboard", iconName: "LayoutDashboard" },
+      { label: "Analytics & Reports", href: `/society/${sid}/analytics`, iconName: "BarChart3" },
       { label: "Committees", href: `/society/${sid}/committees`, iconName: "Shield" },
       { label: "Meetings & Proceedings", href: `/society/${sid}/meetings`, iconName: "Calendar" },
       { label: "Buildings & Layout", href: `/society/${sid}/buildings`, iconName: "Building2" },
@@ -217,6 +221,7 @@ export function getNavigationForRole(
   if (role === "TREASURER") {
     return [
       { label: "Finance Hub", href: "/finance/dashboard", iconName: "LayoutDashboard" },
+      { label: "Analytics & Reports", href: `/society/${sid}/analytics`, iconName: "BarChart3" },
       { label: "Billing & Invoices", href: `/society/${sid}/billing`, iconName: "Receipt" },
       { label: "Units & Dues", href: `/society/${sid}/units`, iconName: "DoorOpen" },
       { label: "Member Directory", href: `/society/${sid}/people`, iconName: "Users" },
@@ -252,13 +257,19 @@ export function getNavigationForRole(
 
   // 7. Staff / Facility Manager / Auditor
   if (role === "MANAGER" || role === "STAFF" || role === "AUDITOR") {
-    return [
+    const items: NavItem[] = [
       { label: "Operations Hub", href: "/staff/dashboard", iconName: "Wrench" },
+    ];
+    if (role === "MANAGER") {
+      items.push({ label: "Analytics & Reports", href: `/society/${sid}/analytics`, iconName: "BarChart3" });
+    }
+    items.push(
       { label: "Complaints", href: `/society/${sid}/complaints`, iconName: "MessageSquare" },
       { label: "Amenities", href: `/society/${sid}/amenities`, iconName: "Sparkles" },
       { label: "Buildings & Units", href: `/society/${sid}/units`, iconName: "DoorOpen" },
       { label: "People Directory", href: `/society/${sid}/people`, iconName: "Users" },
-    ];
+    );
+    return items;
   }
 
   // 8. Vendor Service Provider
