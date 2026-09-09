@@ -195,6 +195,7 @@ export function getNavigationForRole(
       { label: "Events & Gatherings", href: `/society/${sid}/events`, iconName: "Calendar" },
       { label: "Notices", href: `/society/${sid}/notices`, iconName: "Bell" },
       { label: "Documents", href: `/society/${sid}/documents`, iconName: "FileText" },
+      { label: "Handover", href: `/society/${sid}/handover`, iconName: "ClipboardList" },
       { label: "Society Settings", href: `/society/${sid}/society`, iconName: "Settings" },
     ];
   }
@@ -213,6 +214,7 @@ export function getNavigationForRole(
       { label: "Events", href: `/society/${sid}/events`, iconName: "Calendar" },
       { label: "Notices", href: `/society/${sid}/notices`, iconName: "Bell" },
       { label: "Documents", href: `/society/${sid}/documents`, iconName: "FileText" },
+      { label: "Handover", href: `/society/${sid}/handover`, iconName: "ClipboardList" },
       { label: "Society Profile", href: `/society/${sid}/society`, iconName: "Settings" },
     ];
   }

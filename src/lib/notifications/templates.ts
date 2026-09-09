@@ -201,6 +201,38 @@ export const NOTIFICATION_TEMPLATES: Record<NotificationType, NotificationTempla
     bodyTemplate: (p) => p.message || p.body || 'An announcement has been shared by society administration.',
     actionUrlTemplate: (p) => p.actionUrl || '/resident/dashboard',
   },
+
+  // Phase 13 Handover Notifications
+  HANDOVER_CHECKLIST_ASSIGNED: {
+    category: 'GENERAL',
+    titleTemplate: (p) => 'Handover Checklist Assigned: ' + (p.itemTitle || 'Item'),
+    bodyTemplate: (p) => 'You have been assigned handover checklist item "' + (p.itemTitle || 'Item') + '" for project "' + (p.projectTitle || 'Handover Project') + '".',
+    actionUrlTemplate: (p) => p.actionUrl || '/society/' + (p.societyId || '') + '/handover/' + (p.projectId || ''),
+  },
+  HANDOVER_CHECKLIST_OVERDUE: {
+    category: 'GENERAL',
+    titleTemplate: (p) => 'Overdue Checklist Item: ' + (p.itemTitle || 'Item'),
+    bodyTemplate: (p) => 'Handover checklist item "' + (p.itemTitle || 'Item') + '" was due on ' + (p.dueDate || 'N/A') + ' and is still pending.',
+    actionUrlTemplate: (p) => p.actionUrl || '/society/' + (p.societyId || '') + '/handover/' + (p.projectId || ''),
+  },
+  HANDOVER_DEFECT_ASSIGNED: {
+    category: 'GENERAL',
+    titleTemplate: (p) => 'Handover Defect Assigned: ' + (p.defectTitle || 'Defect'),
+    bodyTemplate: (p) => 'You have been assigned defect "' + (p.defectTitle || 'Defect') + '" (Severity: ' + (p.severity || 'N/A') + ') for handover project "' + (p.projectTitle || '') + '".',
+    actionUrlTemplate: (p) => p.actionUrl || '/society/' + (p.societyId || '') + '/handover/' + (p.projectId || ''),
+  },
+  HANDOVER_COMMITMENT_OVERDUE: {
+    category: 'GENERAL',
+    titleTemplate: (p) => 'Builder Commitment Overdue: ' + (p.commitmentTitle || 'Commitment'),
+    bodyTemplate: (p) => 'Builder commitment "' + (p.commitmentTitle || 'Commitment') + '" was due on ' + (p.targetDate || 'N/A') + ' and remains incomplete.',
+    actionUrlTemplate: (p) => p.actionUrl || '/society/' + (p.societyId || '') + '/handover/' + (p.projectId || ''),
+  },
+  HANDOVER_READY_FOR_ACCEPTANCE: {
+    category: 'GENERAL',
+    titleTemplate: (p) => 'Handover Ready for Acceptance: ' + (p.projectTitle || 'Project'),
+    bodyTemplate: (p) => 'Handover project "' + (p.projectTitle || 'Project') + '" is now READY FOR HANDOVER and requires committee review and acceptance.',
+    actionUrlTemplate: (p) => p.actionUrl || '/society/' + (p.societyId || '') + '/handover/' + (p.projectId || ''),
+  },
 };
 
 export function renderNotificationTemplate(

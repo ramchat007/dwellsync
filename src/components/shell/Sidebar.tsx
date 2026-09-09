@@ -29,6 +29,7 @@ import {
   Bell,
   ShieldCheck,
   BarChart3,
+  ClipboardList,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -54,6 +55,7 @@ const ICON_MAP: Record<string, React.ElementType> = {
   Shield,
   ShieldCheck,
   BarChart3,
+  ClipboardList,
 };
 
 export function Sidebar({ className }: { className?: string }) {
