@@ -667,7 +667,18 @@ export interface SocietyMeeting {
 // PHASE 9: MAINTENANCE & BILLING MODELS
 // ==========================================
 
-export type MaintenanceChargeType = "FLAT_RATE" | "AREA_BASED" | "UNIT_TYPE_BASED";
+export type MaintenanceChargeType =
+  | "FLAT_RATE"
+  | "CARPET_AREA"
+  | "BUILT_UP_AREA"
+  | "PER_UNIT"
+  | "PER_PARKING_SLOT"
+  | "PER_OCCUPANT"
+  | "PERCENTAGE"
+  | "USAGE_BASED"
+  | "CUSTOM"
+  | "AREA_BASED"
+  | "UNIT_TYPE_BASED";
 
 export type MaintenanceFrequency =
   | "MONTHLY"
@@ -675,6 +686,13 @@ export type MaintenanceFrequency =
   | "BIANNUAL"
   | "ANNUAL"
   | "ONE_TIME";
+
+export interface RateComponent {
+  name: string;
+  charge_type: MaintenanceChargeType;
+  rate: number;
+  description?: string;
+}
 
 export interface MaintenanceConfiguration {
   id: string;
@@ -684,6 +702,12 @@ export interface MaintenanceConfiguration {
   charge_type: MaintenanceChargeType;
   rate: number;
   unit_type_rates?: Record<string, number> | null;
+  rate_components?: RateComponent[] | null;
+  late_fee_type?: "NONE" | "FLAT" | "PERCENTAGE" | null;
+  late_fee_amount?: number | null;
+  grace_period_days?: number | null;
+  version?: number;
+  parent_config_id?: string | null;
   frequency: MaintenanceFrequency;
   effective_from: string;
   effective_to?: string | null;
@@ -994,4 +1018,283 @@ export interface MeetingActionItem {
   updated_at: string;
   assignee?: Profile | null;
 }
+
+// ==========================================
+// PHASE 13: SOCIETY ACCOUNTING & FINANCE MODELS
+// ==========================================
+
+export type UnitChargeOverrideType =
+  | "FIXED_OVERRIDE"
+  | "ADDITIONAL_SURCHARGE"
+  | "DISCOUNT_FIXED"
+  | "DISCOUNT_PERCENTAGE"
+  | "EXEMPTION";
+
+export interface UnitChargeOverride {
+  id: string;
+  society_id: string;
+  unit_id: string;
+  charge_config_id?: string | null;
+  override_type: UnitChargeOverrideType;
+  amount: number;
+  reason: string;
+  effective_from: string;
+  effective_to?: string | null;
+  is_active: boolean;
+  created_by?: string | null;
+  created_at: string;
+  updated_at: string;
+  unit?: Unit;
+  charge_config?: MaintenanceConfiguration;
+}
+
+export interface FinancialYear {
+  id: string;
+  society_id: string;
+  name: string;
+  start_date: string;
+  end_date: string;
+  is_current: boolean;
+  is_closed: boolean;
+  closed_at?: string | null;
+  closed_by?: string | null;
+  created_at: string;
+  updated_at: string;
+  periods?: FinancialPeriod[];
+}
+
+export type FinancialPeriodStatus = "OPEN" | "LOCKED" | "CLOSED";
+
+export interface FinancialPeriod {
+  id: string;
+  society_id: string;
+  financial_year_id: string;
+  period_number: number;
+  name: string;
+  start_date: string;
+  end_date: string;
+  status: FinancialPeriodStatus;
+  locked_at?: string | null;
+  locked_by?: string | null;
+  lock_reason?: string | null;
+  created_at: string;
+  updated_at: string;
+  financial_year?: FinancialYear;
+}
+
+export type AccountType = "ASSET" | "LIABILITY" | "EQUITY" | "INCOME" | "EXPENSE";
+
+export type AccountCategory =
+  | "CURRENT_ASSET"
+  | "FIXED_ASSET"
+  | "BANK"
+  | "CASH"
+  | "CURRENT_LIABILITY"
+  | "LONG_TERM_LIABILITY"
+  | "RESERVE_FUND"
+  | "OPERATING_INCOME"
+  | "OTHER_INCOME"
+  | "OPERATING_EXPENSE"
+  | "ADMINISTRATIVE_EXPENSE"
+  | "TAX_EXPENSE";
+
+export interface ChartOfAccount {
+  id: string;
+  society_id: string;
+  account_code: string;
+  account_name: string;
+  account_type: AccountType;
+  category: AccountCategory;
+  parent_account_id?: string | null;
+  description?: string | null;
+  is_active: boolean;
+  is_system: boolean;
+  created_at: string;
+  updated_at: string;
+  parent_account?: ChartOfAccount | null;
+  children?: ChartOfAccount[];
+}
+
+export type BankAccountType = "SAVINGS" | "CURRENT" | "FIXED_DEPOSIT" | "CASH_CREDIT" | "PETTY_CASH";
+
+export interface SocietyBankAccount {
+  id: string;
+  society_id: string;
+  account_id: string;
+  bank_name: string;
+  account_number: string;
+  account_type: BankAccountType;
+  branch_name?: string | null;
+  ifsc_code?: string | null;
+  opening_balance: number;
+  current_balance: number;
+  is_primary: boolean;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  coa_account?: ChartOfAccount;
+}
+
+export interface AccountOpeningBalance {
+  id: string;
+  society_id: string;
+  financial_year_id: string;
+  account_id: string;
+  debit_balance: number;
+  credit_balance: number;
+  created_at: string;
+  account?: ChartOfAccount;
+}
+
+export type JournalEntryType =
+  | "STANDARD"
+  | "INVOICE_BILLING"
+  | "PAYMENT_RECEIPT"
+  | "VENDOR_EXPENSE"
+  | "BANK_TRANSFER"
+  | "ADJUSTMENT"
+  | "REVERSAL"
+  | "OPENING_BALANCE";
+
+export type JournalEntryStatus = "DRAFT" | "POSTED" | "REVERSED" | "VOID";
+
+export interface JournalLine {
+  id: string;
+  society_id: string;
+  journal_entry_id: string;
+  account_id: string;
+  line_number: number;
+  debit_amount: number;
+  credit_amount: number;
+  description?: string | null;
+  unit_id?: string | null;
+  created_at: string;
+  account?: ChartOfAccount;
+  unit?: Unit;
+}
+
+export interface JournalEntry {
+  id: string;
+  society_id: string;
+  financial_year_id?: string | null;
+  financial_period_id?: string | null;
+  entry_number: string;
+  entry_date: string;
+  entry_type: JournalEntryType;
+  narration: string;
+  status: JournalEntryStatus;
+  is_backdated: boolean;
+  backdated_reason?: string | null;
+  reversal_of_id?: string | null;
+  source_reference_type?: string | null;
+  source_reference_id?: string | null;
+  total_debit: number;
+  total_credit: number;
+  created_by?: string | null;
+  approved_by?: string | null;
+  created_at: string;
+  updated_at: string;
+  lines?: JournalLine[];
+  creator?: Profile;
+  approver?: Profile;
+  period?: FinancialPeriod;
+}
+
+export type ExpensePaymentStatus = "UNPAID" | "PAID" | "CANCELLED";
+export type ExpensePaymentMode = "CHEQUE" | "BANK_TRANSFER" | "UPI" | "CASH" | "CREDIT";
+
+export interface ExpenseVoucher {
+  id: string;
+  society_id: string;
+  voucher_number: string;
+  voucher_date: string;
+  vendor_name: string;
+  vendor_id?: string | null;
+  expense_account_id: string;
+  paid_from_account_id?: string | null;
+  amount: number;
+  payment_status: ExpensePaymentStatus;
+  payment_mode?: ExpensePaymentMode | null;
+  reference_number?: string | null;
+  description: string;
+  created_by?: string | null;
+  approved_by?: string | null;
+  created_at: string;
+  updated_at: string;
+  expense_account?: ChartOfAccount;
+  paid_from_account?: ChartOfAccount;
+  creator?: Profile;
+  approver?: Profile;
+}
+
+export type ReconciliationStatus = "IN_PROGRESS" | "RECONCILED" | "LOCKED";
+
+export interface BankReconciliation {
+  id: string;
+  society_id: string;
+  bank_account_id: string;
+  financial_period_id?: string | null;
+  statement_date: string;
+  statement_closing_balance: number;
+  ledger_closing_balance: number;
+  difference: number;
+  status: ReconciliationStatus;
+  reconciled_at?: string | null;
+  reconciled_by?: string | null;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+  bank_account?: SocietyBankAccount;
+  period?: FinancialPeriod;
+}
+
+export interface BankTransaction {
+  id: string;
+  society_id: string;
+  bank_account_id: string;
+  reconciliation_id?: string | null;
+  transaction_date: string;
+  description: string;
+  reference_number?: string | null;
+  withdrawal: number;
+  deposit: number;
+  balance?: number | null;
+  is_reconciled: boolean;
+  matched_journal_line_id?: string | null;
+  reconciled_at?: string | null;
+  created_at: string;
+}
+
+export type FinancialReportType =
+  | "BALANCE_SHEET"
+  | "INCOME_EXPENDITURE"
+  | "TRIAL_BALANCE"
+  | "GENERAL_LEDGER"
+  | "RECEIVABLES_SUMMARY"
+  | "ANNUAL_AUDIT_REPORT";
+
+export type FinancialReportStatus = "DRAFT" | "AUDITED" | "APPROVED" | "PUBLISHED";
+
+export interface FinancialReport {
+  id: string;
+  society_id: string;
+  financial_year_id?: string | null;
+  financial_period_id?: string | null;
+  report_type: FinancialReportType;
+  title: string;
+  report_data: Record<string, unknown>;
+  status: FinancialReportStatus;
+  generated_by?: string | null;
+  approved_by?: string | null;
+  approved_at?: string | null;
+  published_by?: string | null;
+  published_at?: string | null;
+  published_notes?: string | null;
+  created_at: string;
+  updated_at: string;
+  generator?: Profile;
+  approver?: Profile;
+  publisher?: Profile;
+}
+
 

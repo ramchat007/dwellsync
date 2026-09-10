@@ -4,7 +4,20 @@ import { z } from "zod";
 // MAINTENANCE CHARGE CONFIGURATION SCHEMAS
 // ==========================================
 
-export const ChargeTypeEnum = z.enum(["FLAT_RATE", "AREA_BASED", "UNIT_TYPE_BASED"]);
+export const ChargeTypeEnum = z.enum([
+  "FLAT_RATE",
+  "CARPET_AREA",
+  "BUILT_UP_AREA",
+  "PER_UNIT",
+  "PER_PARKING_SLOT",
+  "PER_OCCUPANT",
+  "PERCENTAGE",
+  "USAGE_BASED",
+  "CUSTOM",
+  "AREA_BASED",
+  "UNIT_TYPE_BASED",
+]);
+
 export const FrequencyEnum = z.enum([
   "MONTHLY",
   "QUARTERLY",
@@ -13,15 +26,29 @@ export const FrequencyEnum = z.enum([
   "ONE_TIME",
 ]);
 
+export const LateFeeTypeEnum = z.enum(["NONE", "FLAT", "PERCENTAGE"]);
+
+export const RateComponentSchema = z.object({
+  name: z.string().min(2, "Component name required"),
+  charge_type: ChargeTypeEnum,
+  rate: z.coerce.number().min(0, "Rate must be non-negative"),
+  description: z.string().optional(),
+});
+
 export const CreateMaintenanceConfigSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters").max(100),
   description: z.string().max(500).optional().nullable(),
   charge_type: ChargeTypeEnum,
   rate: z.coerce.number().min(0, "Rate cannot be negative"),
   unit_type_rates: z.record(z.coerce.number()).optional().default({}),
+  rate_components: z.array(RateComponentSchema).optional().default([]),
+  late_fee_type: LateFeeTypeEnum.default("NONE"),
+  late_fee_amount: z.coerce.number().min(0).default(0),
+  grace_period_days: z.coerce.number().int().min(0).default(15),
   frequency: FrequencyEnum.default("MONTHLY"),
   effective_from: z.string().min(1, "Effective start date is required"),
   effective_to: z.string().optional().nullable(),
+  parent_config_id: z.string().uuid().optional().nullable(),
 });
 
 export const UpdateMaintenanceConfigSchema = CreateMaintenanceConfigSchema.partial().extend({

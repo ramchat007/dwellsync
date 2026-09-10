@@ -140,6 +140,7 @@ export function FinanceDashboardClient({
         </div>
 
         {/* Right Column: Financial Modules Honest Empty State */}
+        {/* Right Column: Financial Modules Quick Access */}
         <div className="md:col-span-6 space-y-4">
           <div className="text-xs font-bold text-slate-700 uppercase tracking-wide">
             Financial Ledger & Operations
@@ -161,6 +162,33 @@ export function FinanceDashboardClient({
               </p>
             </CardContent>
           </Card>
+          <div className="grid grid-cols-1 gap-3">
+            <Link href={`/society/${sid}/finance`}>
+              <Card className="border-slate-200 hover:border-emerald-500 transition-all p-4 bg-white shadow-2xs group cursor-pointer">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="p-2 rounded-lg bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                    <Banknote className="w-4 h-4" />
+                  </div>
+                  <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-600" />
+                </div>
+                <div className="font-bold text-xs text-slate-900">Society Treasury & Accounting Hub</div>
+                <div className="text-[11px] text-slate-500 mt-0.5">Chart of Accounts, Journal Vouchers, Bank & Cash, and Balance Sheet</div>
+              </Card>
+            </Link>
+
+            <Link href={`/society/${sid}/billing`}>
+              <Card className="border-slate-200 hover:border-emerald-500 transition-all p-4 bg-white shadow-2xs group cursor-pointer">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="p-2 rounded-lg bg-amber-50 text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-colors">
+                    <Receipt className="w-4 h-4" />
+                  </div>
+                  <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-amber-600" />
+                </div>
+                <div className="font-bold text-xs text-slate-900">Maintenance Invoicing & Dues</div>
+                <div className="text-[11px] text-slate-500 mt-0.5">Monthly billing cycles, rate configuration, and member receipts</div>
+              </Card>
+            </Link>
+          </div>
         </div>
       </div>
     </div>

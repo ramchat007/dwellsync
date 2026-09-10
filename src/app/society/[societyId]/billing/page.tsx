@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
   Receipt,
@@ -18,6 +19,7 @@ import {
   CreditCard,
   Building2,
   X,
+  Banknote,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -388,6 +390,16 @@ export default function SocietyBillingPage() {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          <Link href={`/society/${societyId}/finance`}>
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-xs gap-1.5 border-emerald-600 text-emerald-700 hover:bg-emerald-50"
+            >
+              <Banknote className="w-3.5 h-3.5" />
+              Treasury & Accounts
+            </Button>
+          </Link>
           <Button
             variant="outline"
             size="sm"

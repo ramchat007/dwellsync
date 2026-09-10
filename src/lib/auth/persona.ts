@@ -191,6 +191,7 @@ export function getNavigationForRole(
       { label: "People Directory", href: `/society/${sid}/people`, iconName: "Users" },
       { label: "Complaints & Helpdesk", href: `/society/${sid}/complaints`, iconName: "MessageSquare" },
       { label: "Billing & Invoices", href: `/society/${sid}/billing`, iconName: "Receipt" },
+      { label: "Treasury & Finance", href: `/society/${sid}/finance`, iconName: "Banknote" },
       { label: "Amenities", href: `/society/${sid}/amenities`, iconName: "Sparkles" },
       { label: "Events & Gatherings", href: `/society/${sid}/events`, iconName: "Calendar" },
       { label: "Notices", href: `/society/${sid}/notices`, iconName: "Bell" },
@@ -207,6 +208,7 @@ export function getNavigationForRole(
       { label: "Analytics & Reports", href: `/society/${sid}/analytics`, iconName: "BarChart3" },
       { label: "Committees", href: `/society/${sid}/committees`, iconName: "Shield" },
       { label: "Meetings & Proceedings", href: `/society/${sid}/meetings`, iconName: "Calendar" },
+      { label: "Treasury & Finance", href: `/society/${sid}/finance`, iconName: "Banknote" },
       { label: "Buildings & Layout", href: `/society/${sid}/buildings`, iconName: "Building2" },
       { label: "Units Directory", href: `/society/${sid}/units`, iconName: "DoorOpen" },
       { label: "Members Roster", href: `/society/${sid}/people`, iconName: "Users" },
@@ -223,6 +225,7 @@ export function getNavigationForRole(
   if (role === "TREASURER") {
     return [
       { label: "Finance Hub", href: "/finance/dashboard", iconName: "LayoutDashboard" },
+      { label: "Treasury & Accounts", href: `/society/${sid}/finance`, iconName: "Banknote" },
       { label: "Analytics & Reports", href: `/society/${sid}/analytics`, iconName: "BarChart3" },
       { label: "Billing & Invoices", href: `/society/${sid}/billing`, iconName: "Receipt" },
       { label: "Units & Dues", href: `/society/${sid}/units`, iconName: "DoorOpen" },
@@ -264,6 +267,9 @@ export function getNavigationForRole(
     ];
     if (role === "MANAGER") {
       items.push({ label: "Analytics & Reports", href: `/society/${sid}/analytics`, iconName: "BarChart3" });
+    }
+    if (role === "AUDITOR") {
+      items.push({ label: "Treasury & Audit Books", href: `/society/${sid}/finance`, iconName: "Banknote" });
     }
     items.push(
       { label: "Complaints", href: `/society/${sid}/complaints`, iconName: "MessageSquare" },

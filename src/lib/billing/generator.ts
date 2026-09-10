@@ -1,6 +1,8 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { recordAuditLog } from "@/lib/auth/audit";
-import { Invoice, InvoiceLineItem, MaintenanceConfiguration, BillingCycle } from "@/lib/types/database";
+import { Invoice, MaintenanceConfiguration, Unit, UnitChargeOverride } from "@/lib/types/database";
+import { calculateUnitMaintenance } from "./calculationEngine";
+import { createJournalEntry, seedDefaultChartOfAccounts } from "@/lib/services/financeService";
 
 export interface GenerateBillingInvoicesParams {
   societyId: string;
@@ -34,6 +36,7 @@ export async function generateInvoiceNumber(
 
 /**
  * Idempotently generates invoices for all active society units based on the selected charge configuration
+ * and automatically posts balancing double-entry transactions to the General Ledger.
  */
 export async function generateBillingInvoices(
   params: GenerateBillingInvoicesParams
@@ -65,16 +68,40 @@ export async function generateBillingInvoices(
       return { success: false, generatedCount: 0, skippedCount: 0, error: "Maintenance configuration not found" };
     }
 
-    // 3. Fetch all active units in the society
-    const { data: units, error: unitsErr } = await adminClient
-      .from("units")
-      .select("id, unit_number, unit_type, area_sqft, carpet_area_sqft, status")
-      .eq("society_id", params.societyId)
-      .neq("status", "INACTIVE");
+    // 3. Fetch all active units, overrides, and occupant statistics
+    const [
+      { data: units, error: unitsErr },
+      { data: overrides = [] },
+      { data: occupancies = [] },
+    ] = await Promise.all([
+      adminClient
+        .from("units")
+        .select("id, unit_number, unit_type, area_sqft, carpet_area_sqft, built_up_area_sqft, parking_slots, status")
+        .eq("society_id", params.societyId)
+        .neq("status", "INACTIVE"),
+      adminClient
+        .from("unit_charge_overrides")
+        .select("*")
+        .eq("society_id", params.societyId)
+        .eq("is_active", true),
+      adminClient
+        .from("unit_occupancies")
+        .select("unit_id")
+        .eq("society_id", params.societyId)
+        .eq("status", "ACTIVE"),
+    ]);
 
     if (unitsErr || !units || units.length === 0) {
       return { success: false, generatedCount: 0, skippedCount: 0, error: "No units found in this society to bill" };
     }
+
+    const overridesMap = new Map<string, UnitChargeOverride>();
+    (overrides || []).forEach((ov: any) => overridesMap.set(ov.unit_id, ov));
+
+    const occupantCounts: Record<string, number> = {};
+    (occupancies || []).forEach((occ: any) => {
+      occupantCounts[occ.unit_id] = (occupantCounts[occ.unit_id] || 0) + 1;
+    });
 
     // 4. Fetch already existing invoices for this cycle (Idempotency enforcement)
     const { data: existingInvoices, error: existErr } = await adminClient
@@ -88,49 +115,21 @@ export async function generateBillingInvoices(
 
     const alreadyBilledUnitIds = new Set((existingInvoices || []).map((i) => i.unit_id));
 
-    // 5. Build invoice rows for units not yet billed
+    // 5. Build invoice rows for units not yet billed using calculationEngine
     const invoicesToInsert: any[] = [];
     let seq = 1;
+    let totalBilledSum = 0;
 
-    for (const unit of units) {
-      if (alreadyBilledUnitIds.has(unit.id)) {
+    for (const rawUnit of units) {
+      if (alreadyBilledUnitIds.has(rawUnit.id)) {
         continue;
       }
 
-      let lineItems: InvoiceLineItem[] = [];
-      let totalAmount = 0;
+      const unit = rawUnit as unknown as Unit;
+      const activeOverride = overridesMap.get(unit.id) || null;
+      const occCount = occupantCounts[unit.id] || 1;
 
-      if (config.charge_type === "FLAT_RATE") {
-        totalAmount = Number(config.rate);
-        lineItems = [
-          {
-            description: `${config.name} (Flat Rate)`,
-            amount: totalAmount,
-            category: "MAINTENANCE",
-          },
-        ];
-      } else if (config.charge_type === "AREA_BASED") {
-        const area = Number(unit.area_sqft || unit.carpet_area_sqft || 1000);
-        totalAmount = Math.round(Number(config.rate) * area * 100) / 100;
-        lineItems = [
-          {
-            description: `${config.name} (${area} sqft @ ₹${config.rate}/sqft)`,
-            amount: totalAmount,
-            category: "MAINTENANCE",
-          },
-        ];
-      } else if (config.charge_type === "UNIT_TYPE_BASED") {
-        const typeRates = (config.unit_type_rates as Record<string, number>) || {};
-        totalAmount = Number(typeRates[unit.unit_type] ?? config.rate);
-        lineItems = [
-          {
-            description: `${config.name} (${unit.unit_type} Tier)`,
-            amount: totalAmount,
-            category: "MAINTENANCE",
-          },
-        ];
-      }
-
+      const calc = calculateUnitMaintenance(unit, config as MaintenanceConfiguration, occCount, activeOverride);
       const invNumber = await generateInvoiceNumber(params.societyId, cycle.period_start, seq++);
 
       invoicesToInsert.push({
@@ -141,15 +140,17 @@ export async function generateBillingInvoices(
         invoice_number: invNumber,
         invoice_date: new Date().toISOString().slice(0, 10),
         due_date: cycle.due_date,
-        subtotal: totalAmount,
-        adjustments: 0.0,
-        total_amount: totalAmount,
+        subtotal: calc.baseAmount,
+        adjustments: calc.adjustments,
+        total_amount: calc.totalAmount,
         amount_paid: 0.0,
-        balance_due: totalAmount,
+        balance_due: calc.totalAmount,
         status: "UNPAID",
-        line_items: lineItems,
-        notes: `Generated for cycle: ${cycle.name}`,
+        line_items: calc.lineItems,
+        notes: `Generated for cycle: ${cycle.name} (Config v${config.version || 1})`,
       });
+
+      totalBilledSum += calc.totalAmount;
     }
 
     if (invoicesToInsert.length === 0) {
@@ -182,7 +183,47 @@ export async function generateBillingInvoices(
       .update({ status: "GENERATED", updated_at: new Date().toISOString() })
       .eq("id", cycle.id);
 
-    // 8. Log Audit Trail
+    // 8. Auto-post balancing double-entry journal voucher to Accounting General Ledger:
+    // Debit: 1110 Accounts Receivable - Maintenance Dues
+    // Credit: 4010 Maintenance Charges Income
+    try {
+      const accounts = await seedDefaultChartOfAccounts(params.societyId, params.actorUserId);
+      const arAccount = accounts.find((a) => a.account_code === "1110") || accounts[0];
+      const incomeAccount = accounts.find((a) => a.account_code === "4010") || accounts[1];
+
+      if (arAccount && incomeAccount && totalBilledSum > 0) {
+        const roundedSum = Math.round(totalBilledSum * 100) / 100;
+        await createJournalEntry(
+          params.societyId,
+          {
+            entry_date: new Date().toISOString().slice(0, 10),
+            entry_type: "INVOICE_BILLING",
+            narration: `Maintenance Billing Cycle ${cycle.name}: ${invoicesToInsert.length} invoices generated`,
+            source_reference_type: "BILLING_CYCLE",
+            source_reference_id: cycle.id,
+            lines: [
+              {
+                account_id: arAccount.id,
+                debit_amount: roundedSum,
+                credit_amount: 0,
+                description: `Maintenance dues receivable for cycle ${cycle.name}`,
+              },
+              {
+                account_id: incomeAccount.id,
+                debit_amount: 0,
+                credit_amount: roundedSum,
+                description: `Maintenance income recognized for cycle ${cycle.name}`,
+              },
+            ],
+          },
+          params.actorUserId
+        );
+      }
+    } catch (acctErr) {
+      console.warn("[InvoiceGenerator] Accounting post-hook warning:", acctErr);
+    }
+
+    // 9. Log Audit Trail
     await recordAuditLog({
       actorUserId: params.actorUserId,
       effectiveUserId: params.effectiveUserId,
@@ -195,6 +236,7 @@ export async function generateBillingInvoices(
         charge_config_name: config.name,
         generated_count: invoicesToInsert.length,
         skipped_count: alreadyBilledUnitIds.size,
+        total_amount: Math.round(totalBilledSum * 100) / 100,
       },
     });
 
