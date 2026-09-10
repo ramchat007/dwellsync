@@ -1,4 +1,4 @@
--- DwellSync Phase 13 Migration: Society Accounting & Finance Foundation
+-- DwellSync Phase 14 Migration: Society Accounting & Finance Foundation
 -- Introduces Chart of Accounts, Double-Entry General Ledger, Financial Years & Periods,
 -- Bank Accounts, Petty Cash, Reconciliations, Expense Vouchers, Financial Reports,
 -- Unit Charge Overrides, and enhanced Maintenance Configuration components with strict RLS.
@@ -383,6 +383,7 @@ ALTER TABLE public.financial_reports ENABLE ROW LEVEL SECURITY;
 -- Super Admins pass through automatically
 
 -- 10.1 Unit Charge Overrides: Members can view, Admins/Treasurers can manage
+DROP POLICY IF EXISTS "Members view overrides" ON public.unit_charge_overrides;
 CREATE POLICY "Members view overrides" ON public.unit_charge_overrides
   FOR SELECT USING (
     EXISTS (
@@ -393,6 +394,7 @@ CREATE POLICY "Members view overrides" ON public.unit_charge_overrides
     )
   );
 
+DROP POLICY IF EXISTS "Treasurers and Admins manage overrides" ON public.unit_charge_overrides;
 CREATE POLICY "Treasurers and Admins manage overrides" ON public.unit_charge_overrides
   FOR ALL USING (
     EXISTS (
@@ -405,6 +407,7 @@ CREATE POLICY "Treasurers and Admins manage overrides" ON public.unit_charge_ove
   );
 
 -- 10.2 Financial Years & Periods
+DROP POLICY IF EXISTS "Members view financial years" ON public.financial_years;
 CREATE POLICY "Members view financial years" ON public.financial_years
   FOR SELECT USING (
     EXISTS (
@@ -415,6 +418,7 @@ CREATE POLICY "Members view financial years" ON public.financial_years
     )
   );
 
+DROP POLICY IF EXISTS "Admins and Treasurers manage financial years" ON public.financial_years;
 CREATE POLICY "Admins and Treasurers manage financial years" ON public.financial_years
   FOR ALL USING (
     EXISTS (
@@ -426,6 +430,7 @@ CREATE POLICY "Admins and Treasurers manage financial years" ON public.financial
     )
   );
 
+DROP POLICY IF EXISTS "Members view financial periods" ON public.financial_periods;
 CREATE POLICY "Members view financial periods" ON public.financial_periods
   FOR SELECT USING (
     EXISTS (
@@ -436,6 +441,7 @@ CREATE POLICY "Members view financial periods" ON public.financial_periods
     )
   );
 
+DROP POLICY IF EXISTS "Admins and Treasurers manage financial periods" ON public.financial_periods;
 CREATE POLICY "Admins and Treasurers manage financial periods" ON public.financial_periods
   FOR ALL USING (
     EXISTS (
@@ -448,6 +454,7 @@ CREATE POLICY "Admins and Treasurers manage financial periods" ON public.financi
   );
 
 -- 10.3 Chart of Accounts
+DROP POLICY IF EXISTS "Members view chart of accounts" ON public.chart_of_accounts;
 CREATE POLICY "Members view chart of accounts" ON public.chart_of_accounts
   FOR SELECT USING (
     EXISTS (
@@ -458,6 +465,7 @@ CREATE POLICY "Members view chart of accounts" ON public.chart_of_accounts
     )
   );
 
+DROP POLICY IF EXISTS "Admins and Treasurers manage chart of accounts" ON public.chart_of_accounts;
 CREATE POLICY "Admins and Treasurers manage chart of accounts" ON public.chart_of_accounts
   FOR ALL USING (
     EXISTS (
@@ -470,6 +478,7 @@ CREATE POLICY "Admins and Treasurers manage chart of accounts" ON public.chart_o
   );
 
 -- 10.4 Society Bank Accounts
+DROP POLICY IF EXISTS "Authorized roles view bank accounts" ON public.society_bank_accounts;
 CREATE POLICY "Authorized roles view bank accounts" ON public.society_bank_accounts
   FOR SELECT USING (
     EXISTS (
@@ -481,6 +490,7 @@ CREATE POLICY "Authorized roles view bank accounts" ON public.society_bank_accou
     )
   );
 
+DROP POLICY IF EXISTS "Treasurers and Admins manage bank accounts" ON public.society_bank_accounts;
 CREATE POLICY "Treasurers and Admins manage bank accounts" ON public.society_bank_accounts
   FOR ALL USING (
     EXISTS (
@@ -493,6 +503,7 @@ CREATE POLICY "Treasurers and Admins manage bank accounts" ON public.society_ban
   );
 
 -- 10.5 Journal Entries & Lines
+DROP POLICY IF EXISTS "Authorized roles view journal entries" ON public.journal_entries;
 CREATE POLICY "Authorized roles view journal entries" ON public.journal_entries
   FOR SELECT USING (
     EXISTS (
@@ -504,6 +515,7 @@ CREATE POLICY "Authorized roles view journal entries" ON public.journal_entries
     )
   );
 
+DROP POLICY IF EXISTS "Treasurers and Admins manage journal entries" ON public.journal_entries;
 CREATE POLICY "Treasurers and Admins manage journal entries" ON public.journal_entries
   FOR ALL USING (
     EXISTS (
@@ -515,6 +527,7 @@ CREATE POLICY "Treasurers and Admins manage journal entries" ON public.journal_e
     )
   );
 
+DROP POLICY IF EXISTS "Authorized roles view journal lines" ON public.journal_lines;
 CREATE POLICY "Authorized roles view journal lines" ON public.journal_lines
   FOR SELECT USING (
     EXISTS (
@@ -526,6 +539,7 @@ CREATE POLICY "Authorized roles view journal lines" ON public.journal_lines
     )
   );
 
+DROP POLICY IF EXISTS "Treasurers and Admins manage journal lines" ON public.journal_lines;
 CREATE POLICY "Treasurers and Admins manage journal lines" ON public.journal_lines
   FOR ALL USING (
     EXISTS (
@@ -538,6 +552,7 @@ CREATE POLICY "Treasurers and Admins manage journal lines" ON public.journal_lin
   );
 
 -- 10.6 Expense Vouchers
+DROP POLICY IF EXISTS "Authorized roles view expense vouchers" ON public.expense_vouchers;
 CREATE POLICY "Authorized roles view expense vouchers" ON public.expense_vouchers
   FOR SELECT USING (
     EXISTS (
@@ -549,6 +564,7 @@ CREATE POLICY "Authorized roles view expense vouchers" ON public.expense_voucher
     )
   );
 
+DROP POLICY IF EXISTS "Treasurers and Admins manage expense vouchers" ON public.expense_vouchers;
 CREATE POLICY "Treasurers and Admins manage expense vouchers" ON public.expense_vouchers
   FOR ALL USING (
     EXISTS (
@@ -561,6 +577,7 @@ CREATE POLICY "Treasurers and Admins manage expense vouchers" ON public.expense_
   );
 
 -- 10.7 Bank Reconciliations
+DROP POLICY IF EXISTS "Authorized roles view reconciliations" ON public.bank_reconciliations;
 CREATE POLICY "Authorized roles view reconciliations" ON public.bank_reconciliations
   FOR SELECT USING (
     EXISTS (
@@ -572,6 +589,7 @@ CREATE POLICY "Authorized roles view reconciliations" ON public.bank_reconciliat
     )
   );
 
+DROP POLICY IF EXISTS "Treasurers and Admins manage reconciliations" ON public.bank_reconciliations;
 CREATE POLICY "Treasurers and Admins manage reconciliations" ON public.bank_reconciliations
   FOR ALL USING (
     EXISTS (
@@ -583,6 +601,7 @@ CREATE POLICY "Treasurers and Admins manage reconciliations" ON public.bank_reco
     )
   );
 
+DROP POLICY IF EXISTS "Authorized roles view bank transactions" ON public.bank_transactions;
 CREATE POLICY "Authorized roles view bank transactions" ON public.bank_transactions
   FOR SELECT USING (
     EXISTS (
@@ -594,6 +613,7 @@ CREATE POLICY "Authorized roles view bank transactions" ON public.bank_transacti
     )
   );
 
+DROP POLICY IF EXISTS "Treasurers and Admins manage bank transactions" ON public.bank_transactions;
 CREATE POLICY "Treasurers and Admins manage bank transactions" ON public.bank_transactions
   FOR ALL USING (
     EXISTS (
@@ -608,6 +628,7 @@ CREATE POLICY "Treasurers and Admins manage bank transactions" ON public.bank_tr
 -- 10.8 Financial Reports:
 -- Draft/Audited/Approved reports viewable by Treasury, Admin, Secretary, Committee, Auditor.
 -- PUBLISHED reports viewable by ALL active society members (including residents).
+DROP POLICY IF EXISTS "Members view financial reports" ON public.financial_reports;
 CREATE POLICY "Members view financial reports" ON public.financial_reports
   FOR SELECT USING (
     EXISTS (
@@ -622,6 +643,7 @@ CREATE POLICY "Members view financial reports" ON public.financial_reports
     )
   );
 
+DROP POLICY IF EXISTS "Treasurers and Admins manage financial reports" ON public.financial_reports;
 CREATE POLICY "Treasurers and Admins manage financial reports" ON public.financial_reports
   FOR ALL USING (
     EXISTS (

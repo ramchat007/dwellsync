@@ -29,10 +29,14 @@ export type NotificationType =
   // Circulars & Notices
   | "NOTICE_PUBLISHED"
   | "IMPORTANT_NOTICE_PUBLISHED"
-  // Community Events
+  // Community Events & Polls
   | "EVENT_PUBLISHED"
   | "EVENT_UPDATED"
   | "EVENT_CANCELLED"
+  | "EVENT_REMINDER"
+  | "POLL_PUBLISHED"
+  | "POLL_REMINDER_CLOSING"
+  | "POLL_CLOSED_RESULTS"
   // Governance & Meetings
   | "MEETING_PUBLISHED"
   | "MEETING_SCHEDULED"
@@ -52,7 +56,11 @@ export type NotificationType =
   | "HANDOVER_CHECKLIST_OVERDUE"
   | "HANDOVER_DEFECT_ASSIGNED"
   | "HANDOVER_COMMITMENT_OVERDUE"
-  | "HANDOVER_READY_FOR_ACCEPTANCE";
+  | "HANDOVER_READY_FOR_ACCEPTANCE"
+  // Document Management
+  | "DOCUMENT_PUBLISHED"
+  | "DOCUMENT_APPROVED"
+  | "DOCUMENT_REVIEW_REQUESTED";
 
 export type NotificationChannel = "IN_APP" | "EMAIL" | "SMS" | "WHATSAPP";
 

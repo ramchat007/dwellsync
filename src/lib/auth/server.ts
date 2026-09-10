@@ -93,8 +93,27 @@ export async function getCurrentIdentity(): Promise<UserIdentity | null> {
         *,
         society:societies (*)
       `)
-      .eq("user_id", impersonationSession.target_user_id)
-      .eq("status", "ACTIVE");
+    let currentSociety = impersonationSession.target_society || null;
+    if (!currentSociety && impersonationSession.target_society_id) {
+      if (targetMemberships && targetMemberships.length > 0) {
+        const match = (targetMemberships as any[]).find(
+          (m) => m.society_id === impersonationSession.target_society_id
+        );
+        if (match?.society) {
+          currentSociety = match.society;
+        }
+      }
+      if (!currentSociety) {
+        const { data: soc } = await adminClient
+          .from("societies")
+          .select("*")
+          .eq("id", impersonationSession.target_society_id)
+          .maybeSingle();
+        if (soc) {
+          currentSociety = soc as Society;
+        }
+      }
+    }
 
     return {
       user: { id: resolvedUserId, email: resolvedEmail },
@@ -105,7 +124,7 @@ export async function getCurrentIdentity(): Promise<UserIdentity | null> {
       isImpersonating: true,
       originalUser: fallbackProfile,
       effectiveUser: targetProfile,
-      currentSociety: impersonationSession.target_society || null,
+      currentSociety,
       availableSocieties: (targetMemberships as (SocietyMembership & { society: Society })[]) || [],
       currentRole: effectiveRole,
       permissions,
@@ -208,6 +227,13 @@ export async function requireSocietyAccess(
 
   if (identity.isSuperAdmin && !identity.isImpersonating) {
     return { identity, society: society as Society };
+  }
+
+  // Preserve tenant boundary during impersonation
+  if (identity.isImpersonating && identity.impersonationSession?.target_society_id) {
+    if (identity.impersonationSession.target_society_id !== societyId) {
+      redirect("/unauthorized");
+    }
   }
 
   const { data: membership } = await adminClient

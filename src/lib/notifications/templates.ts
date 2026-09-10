@@ -125,6 +125,30 @@ export const NOTIFICATION_TEMPLATES: Record<NotificationType, NotificationTempla
     bodyTemplate: (p) => 'The event "' + (p.eventTitle || 'event') + '" has been cancelled.',
     actionUrlTemplate: () => '/resident/events',
   },
+  EVENT_REMINDER: {
+    category: 'EVENTS',
+    titleTemplate: (p) => 'Event Reminder: ' + (p.eventTitle || 'Event'),
+    bodyTemplate: (p) => 'Reminder: "' + (p.eventTitle || 'Event') + '" is starting ' + (p.timeRemaining || 'soon') + ' at ' + (p.location || 'the society') + '.',
+    actionUrlTemplate: () => '/resident/events',
+  },
+  POLL_PUBLISHED: {
+    category: 'GENERAL',
+    titleTemplate: (p) => 'New Society Poll: ' + (p.pollTitle || 'Poll'),
+    bodyTemplate: (p) => 'Your vote matters! Please participate in "' + (p.pollTitle || 'new poll') + '" before ' + (p.closesAt || 'it closes') + '.',
+    actionUrlTemplate: () => '/resident/polls',
+  },
+  POLL_REMINDER_CLOSING: {
+    category: 'GENERAL',
+    titleTemplate: (p) => 'Poll Closing Soon: ' + (p.pollTitle || 'Poll'),
+    bodyTemplate: (p) => 'Last chance to cast your vote for "' + (p.pollTitle || 'Poll') + '". Voting closes ' + (p.timeRemaining || 'shortly') + '.',
+    actionUrlTemplate: () => '/resident/polls',
+  },
+  POLL_CLOSED_RESULTS: {
+    category: 'GENERAL',
+    titleTemplate: (p) => 'Poll Results Available: ' + (p.pollTitle || 'Poll'),
+    bodyTemplate: (p) => 'Voting has concluded for "' + (p.pollTitle || 'Poll') + '". View the final community results now.',
+    actionUrlTemplate: () => '/resident/polls',
+  },
 
   // Governance & Meetings
   MEETING_PUBLISHED: {
@@ -232,6 +256,26 @@ export const NOTIFICATION_TEMPLATES: Record<NotificationType, NotificationTempla
     titleTemplate: (p) => 'Handover Ready for Acceptance: ' + (p.projectTitle || 'Project'),
     bodyTemplate: (p) => 'Handover project "' + (p.projectTitle || 'Project') + '" is now READY FOR HANDOVER and requires committee review and acceptance.',
     actionUrlTemplate: (p) => p.actionUrl || '/society/' + (p.societyId || '') + '/handover/' + (p.projectId || ''),
+  },
+
+  // Document Management Notifications
+  DOCUMENT_PUBLISHED: {
+    category: 'NOTICES',
+    titleTemplate: (p) => 'Official Document Published: ' + (p.documentTitle || 'New Document'),
+    bodyTemplate: (p) => (p.category ? `[${p.category.replace(/_/g, ' ')}] ` : '') + (p.documentTitle || 'A document') + ' has been approved and published for society members.',
+    actionUrlTemplate: (p) => p.actionUrl || (p.isResident ? `/resident/documents?id=${p.documentId || ''}` : `/society/${p.societyId || ''}/documents?id=${p.documentId || ''}`),
+  },
+  DOCUMENT_APPROVED: {
+    category: 'GENERAL',
+    titleTemplate: (p) => 'Document Approved: ' + (p.documentTitle || 'Document'),
+    bodyTemplate: (p) => 'Document "' + (p.documentTitle || 'Document') + '" has been approved by the committee.',
+    actionUrlTemplate: (p) => p.actionUrl || `/society/${p.societyId || ''}/documents?id=${p.documentId || ''}`,
+  },
+  DOCUMENT_REVIEW_REQUESTED: {
+    category: 'GENERAL',
+    titleTemplate: (p) => 'Document Pending Review: ' + (p.documentTitle || 'Document'),
+    bodyTemplate: (p) => 'A new document "' + (p.documentTitle || 'Document') + '" was submitted for committee review.',
+    actionUrlTemplate: (p) => p.actionUrl || `/society/${p.societyId || ''}/documents?id=${p.documentId || ''}`,
   },
 };
 

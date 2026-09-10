@@ -3,6 +3,7 @@ import crypto from "crypto";
 import { createServerSupabaseClient } from "../supabase/server";
 import { createAdminClient } from "../supabase/admin";
 import { recordAuditLog } from "./audit";
+import { getAuthSessionCookie } from "./session";
 import { ImpersonationResult, ImpersonationStartRequest } from "../types/auth";
 import { ImpersonationSession, RoleId } from "../types/database";
 
@@ -41,6 +42,11 @@ export async function getActiveImpersonationSession(): Promise<ImpersonationSess
     .maybeSingle();
 
   if (error || !data) {
+    try {
+      cookieStore.delete(IMPERSONATION_COOKIE_NAME);
+    } catch {
+      // Ignored in read-only environments
+    }
     return null;
   }
 
@@ -55,12 +61,24 @@ export async function startImpersonationAction(
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
+  let callerUserId: string | null = user?.id || null;
+  let callerEmail: string = user?.email || "";
+
+  // Fallback to secure session cookie if Supabase user is not found
+  if (!callerUserId) {
+    const session = await getAuthSessionCookie();
+    if (session?.userId) {
+      callerUserId = session.userId;
+      callerEmail = session.email || "";
+    }
+  }
+
+  if (!callerUserId) {
     return { success: false, error: "Authentication required." };
   }
 
   // 1. Check if caller is verified Super Admin in platform_admins
-  const isSuperAdmin = await verifyRealSuperAdmin(user.id);
+  const isSuperAdmin = await verifyRealSuperAdmin(callerUserId);
   if (!isSuperAdmin) {
     return { success: false, error: "Unauthorized. Only Platform Super Admins can impersonate users." };
   }
@@ -68,10 +86,22 @@ export async function startImpersonationAction(
   // 2. Anti-Chaining Check
   const existingSession = await getActiveImpersonationSession();
   if (existingSession) {
-    return {
-      success: false,
-      error: "Impersonation chaining is strictly prohibited. Exit the current impersonation session first.",
-    };
+    // If caller is the same admin, cleanly terminate old session so switching personas succeeds seamlessly
+    if (existingSession.original_admin_id === callerUserId) {
+      const adminClient = createAdminClient();
+      await adminClient
+        .from("impersonation_sessions")
+        .update({
+          status: "TERMINATED",
+          ended_at: new Date().toISOString(),
+        })
+        .eq("id", existingSession.id);
+    } else {
+      return {
+        success: false,
+        error: "Impersonation chaining is strictly prohibited. Exit the current impersonation session first.",
+      };
+    }
   }
 
   const adminClient = createAdminClient();
@@ -90,6 +120,7 @@ export async function startImpersonationAction(
   let targetSocietyId = request.targetSocietyId || null;
   let targetRoleId: RoleId | null = request.targetRoleId || null;
 
+  // 4. Validate effective user against the selected society and role before granting access
   if (targetSocietyId) {
     const { data: membership } = await adminClient
       .from("society_memberships")
@@ -99,9 +130,14 @@ export async function startImpersonationAction(
       .eq("status", "ACTIVE")
       .maybeSingle();
 
-    if (membership) {
-      targetRoleId = membership.role_id as RoleId;
+    if (!membership) {
+      return {
+        success: false,
+        error: "Target user does not have an active membership in the selected society.",
+      };
     }
+
+    targetRoleId = (membership.role_id as RoleId) || targetRoleId;
   } else {
     const { data: firstMembership } = await adminClient
       .from("society_memberships")
@@ -118,13 +154,13 @@ export async function startImpersonationAction(
     }
   }
 
-  // 4. Generate random 256-bit cryptographic token
+  // 5. Generate random 256-bit cryptographic token
   const sessionToken = crypto.randomBytes(32).toString("hex");
 
   const { data: sessionRecord, error: sessionError } = await adminClient
     .from("impersonation_sessions")
     .insert({
-      original_admin_id: user.id,
+      original_admin_id: callerUserId,
       target_user_id: request.targetUserId,
       target_society_id: targetSocietyId,
       target_role_id: targetRoleId,
@@ -140,7 +176,7 @@ export async function startImpersonationAction(
     return { success: false, error: "Failed to establish impersonation session." };
   }
 
-  // 5. Store session token in secure HttpOnly cookie
+  // 6. Store session token and active society in secure cookies
   const cookieStore = await cookies();
   cookieStore.set(IMPERSONATION_COOKIE_NAME, sessionToken, {
     httpOnly: true,
@@ -150,9 +186,18 @@ export async function startImpersonationAction(
     maxAge: 60 * 60 * 4,
   });
 
-  // 6. Record Audit Log
+  if (targetSocietyId) {
+    cookieStore.set("DwellSyncHub_active_society", targetSocietyId, {
+      path: "/",
+      httpOnly: false,
+      sameSite: "lax",
+      maxAge: 60 * 60 * 4,
+    });
+  }
+
+  // 7. Record Audit Log
   await recordAuditLog({
-    actorUserId: user.id,
+    actorUserId: callerUserId,
     effectiveUserId: request.targetUserId,
     societyId: targetSocietyId,
     action: "IMPERSONATION_STARTED",
@@ -167,6 +212,7 @@ export async function startImpersonationAction(
   return {
     success: true,
     sessionId: sessionRecord.id,
+    sessionToken,
     targetRole: targetRoleId || undefined,
     targetSocietyId: targetSocietyId || undefined,
   };

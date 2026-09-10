@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { startImpersonationAction } from "@/lib/auth/impersonation";
+import { startImpersonationAction, IMPERSONATION_COOKIE_NAME } from "@/lib/auth/impersonation";
+
+export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
   try {
@@ -21,7 +23,28 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: result.error || "Failed to start impersonation" }, { status: 403 });
     }
 
-    return NextResponse.json(result);
+    const response = NextResponse.json(result);
+
+    if (result.sessionToken) {
+      response.cookies.set(IMPERSONATION_COOKIE_NAME, result.sessionToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: 60 * 60 * 4,
+      });
+
+      if (result.targetSocietyId) {
+        response.cookies.set("DwellSyncHub_active_society", result.targetSocietyId, {
+          path: "/",
+          httpOnly: false,
+          sameSite: "lax",
+          maxAge: 60 * 60 * 4,
+        });
+      }
+    }
+
+    return response;
   } catch (error) {
     console.error("[API/impersonate/start] Error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

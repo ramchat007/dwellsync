@@ -17,7 +17,7 @@ export default function RootLayout({
     <html lang="en" className="h-full">
       <body className="font-sans min-h-full flex flex-col bg-slate-50 text-slate-900">
         <AuthProvider>
-          <ImpersonationBanner />
+          {/* <ImpersonationBanner /> */}
           <div className="flex-1 flex flex-col">{children}</div>
         </AuthProvider>
       </body>

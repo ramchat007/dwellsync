@@ -194,9 +194,11 @@ export function getNavigationForRole(
       { label: "Treasury & Finance", href: `/society/${sid}/finance`, iconName: "Banknote" },
       { label: "Amenities", href: `/society/${sid}/amenities`, iconName: "Sparkles" },
       { label: "Events & Gatherings", href: `/society/${sid}/events`, iconName: "Calendar" },
+      { label: "Polls & Surveys", href: `/society/${sid}/polls`, iconName: "CheckSquare" },
       { label: "Notices", href: `/society/${sid}/notices`, iconName: "Bell" },
       { label: "Documents", href: `/society/${sid}/documents`, iconName: "FileText" },
       { label: "Handover", href: `/society/${sid}/handover`, iconName: "ClipboardList" },
+      { label: "Assets & Inventory", href: `/society/${sid}/assets`, iconName: "Boxes" },
       { label: "Society Settings", href: `/society/${sid}/society`, iconName: "Settings" },
     ];
   }
@@ -214,9 +216,11 @@ export function getNavigationForRole(
       { label: "Members Roster", href: `/society/${sid}/people`, iconName: "Users" },
       { label: "Complaints", href: `/society/${sid}/complaints`, iconName: "MessageSquare" },
       { label: "Events", href: `/society/${sid}/events`, iconName: "Calendar" },
+      { label: "Polls & Surveys", href: `/society/${sid}/polls`, iconName: "CheckSquare" },
       { label: "Notices", href: `/society/${sid}/notices`, iconName: "Bell" },
       { label: "Documents", href: `/society/${sid}/documents`, iconName: "FileText" },
       { label: "Handover", href: `/society/${sid}/handover`, iconName: "ClipboardList" },
+      { label: "Assets & Inventory", href: `/society/${sid}/assets`, iconName: "Boxes" },
       { label: "Society Profile", href: `/society/${sid}/society`, iconName: "Settings" },
     ];
   }
@@ -231,6 +235,7 @@ export function getNavigationForRole(
       { label: "Units & Dues", href: `/society/${sid}/units`, iconName: "DoorOpen" },
       { label: "Member Directory", href: `/society/${sid}/people`, iconName: "Users" },
       { label: "Documents", href: `/society/${sid}/documents`, iconName: "FileText" },
+      { label: "Assets & Inventory", href: `/society/${sid}/assets`, iconName: "Boxes" },
       { label: "Society Profile", href: `/society/${sid}/society`, iconName: "Settings" },
     ];
   }
@@ -246,6 +251,7 @@ export function getNavigationForRole(
       { label: "Complaints", href: "/resident/complaints", iconName: "MessageSquare" },
       { label: "Amenities", href: "/resident/amenities", iconName: "Sparkles" },
       { label: "Events", href: "/resident/events", iconName: "Calendar" },
+      { label: "Polls & Surveys", href: "/resident/polls", iconName: "CheckSquare" },
       { label: "Notices", href: "/resident/notices", iconName: "Bell" },
       { label: "Documents", href: "/resident/documents", iconName: "FileText" },
       { label: "Community", href: "/resident/community", iconName: "Users" },
@@ -272,6 +278,7 @@ export function getNavigationForRole(
       items.push({ label: "Treasury & Audit Books", href: `/society/${sid}/finance`, iconName: "Banknote" });
     }
     items.push(
+      { label: "Assets & Inventory", href: `/society/${sid}/assets`, iconName: "Boxes" },
       { label: "Complaints", href: `/society/${sid}/complaints`, iconName: "MessageSquare" },
       { label: "Amenities", href: `/society/${sid}/amenities`, iconName: "Sparkles" },
       { label: "Buildings & Units", href: `/society/${sid}/units`, iconName: "DoorOpen" },

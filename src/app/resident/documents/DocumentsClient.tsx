@@ -36,9 +36,14 @@ export function DocumentsClient({
     { id: "ALL", label: "All Documents" },
     { id: "SOCIETY_BYLAWS", label: "Bylaws & Guidelines" },
     { id: "AGM_MINUTES", label: "AGM Minutes" },
-    { id: "FINANCIAL_REPORT", label: "Audit Reports" },
+    { id: "FINANCIAL_REPORT", label: "Financial & Audits" },
+    { id: "STATUTORY_COMPLIANCE", label: "Compliance & Filings" },
+    { id: "ENGINEERING_MAINTENANCE", label: "Engineering & AMC" },
+    { id: "BUILDER_HANDOVER", label: "Handover Records" },
+    { id: "NOTICES_CIRCULARS", label: "Notices & Circulars" },
     { id: "FORMS_TEMPLATES", label: "Forms & Templates" },
     { id: "RULES_REGULATIONS", label: "House Rules" },
+    { id: "RESIDENT_UNIT_DOCUMENTS", label: "Unit Records" },
   ];
 
   const filteredDocuments = documents.filter((doc) => {

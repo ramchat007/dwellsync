@@ -31,6 +31,8 @@ import {
   BarChart3,
   ClipboardList,
   Banknote,
+  Boxes,
+  Package,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -58,6 +60,8 @@ const ICON_MAP: Record<string, React.ElementType> = {
   BarChart3,
   ClipboardList,
   Banknote,
+  Boxes,
+  Package,
 };
 
 export function Sidebar({ className }: { className?: string }) {

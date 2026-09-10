@@ -126,7 +126,19 @@ export type AuditAction =
   | "NOTICE_UPDATED"
   | "NOTICE_ARCHIVED"
   | "DOCUMENT_UPLOADED"
+  | "DOCUMENT_UPDATED"
   | "DOCUMENT_DELETED"
+  | "DOCUMENT_VERSION_UPLOADED"
+  | "DOCUMENT_APPROVED"
+  | "DOCUMENT_PUBLISHED"
+  | "DOCUMENT_ARCHIVED"
+  | "DOCUMENT_RESTORED"
+  | "DOCUMENT_DOWNLOADED"
+  | "DOCUMENT_FOLDER_CREATED"
+  | "DOCUMENT_FOLDER_UPDATED"
+  | "DOCUMENT_FOLDER_DELETED"
+  | "DOCUMENT_ENTITY_LINKED"
+  | "DOCUMENT_ENTITY_UNLINKED"
   | "MAINTENANCE_CONFIG_CREATED"
   | "MAINTENANCE_CONFIG_UPDATED"
   | "BILLING_CYCLE_CREATED"
@@ -431,9 +443,28 @@ export type DocumentCategory =
   | "AGM_MINUTES"
   | "FINANCIAL_REPORT"
   | "FORMS_TEMPLATES"
-  | "RULES_REGULATIONS";
+  | "RULES_REGULATIONS"
+  | "STATUTORY_COMPLIANCE"
+  | "ENGINEERING_MAINTENANCE"
+  | "LEGAL_CONTRACTS"
+  | "BUILDER_HANDOVER"
+  | "NOTICES_CIRCULARS"
+  | "RESIDENT_UNIT_DOCUMENTS"
+  | "GENERAL";
 
-export type DocumentVisibility = "ALL_RESIDENTS" | "OWNERS_ONLY" | "COMMITTEE_ONLY";
+export type DocumentVisibility =
+  | "ALL_RESIDENTS"
+  | "OWNERS_ONLY"
+  | "COMMITTEE_ONLY"
+  | "ADMIN_ONLY"
+  | "ROLE_RESTRICTED";
+
+export type DocumentStatus =
+  | "DRAFT"
+  | "UNDER_REVIEW"
+  | "APPROVED"
+  | "PUBLISHED"
+  | "ARCHIVED";
 
 export interface SocietyDocument {
   id: string;
@@ -441,10 +472,31 @@ export interface SocietyDocument {
   title: string;
   description?: string | null;
   category: DocumentCategory;
+  subcategory?: string | null;
+  folder_id?: string | null;
+  tags?: string[];
+  metadata?: Record<string, any>;
+  status?: DocumentStatus;
+  visibility: DocumentVisibility;
+  allowed_roles?: string[];
+  unit_id?: string | null;
+  resident_id?: string | null;
+  document_date?: string | null;
+  effective_date?: string | null;
+  expiry_date?: string | null;
   file_url: string;
+  file_path?: string | null;
   file_type?: string | null;
   file_size_kb?: number | null;
-  visibility: DocumentVisibility;
+  current_version?: number;
+  is_archived?: boolean;
+  archived_at?: string | null;
+  archived_by?: string | null;
+  approved_by?: string | null;
+  approved_at?: string | null;
+  published_by?: string | null;
+  published_at?: string | null;
+  publication_notes?: string | null;
   uploaded_by: string;
   created_at: string;
   updated_at: string;
@@ -594,9 +646,26 @@ export type EventCategory =
   | "CULTURAL"
   | "GENERAL";
 
-export type EventStatus = "UPCOMING" | "COMPLETED" | "CANCELLED";
+export type EventStatus = "DRAFT" | "PUBLISHED" | "UPCOMING" | "COMPLETED" | "CANCELLED";
 
 export type EventVisibility = "ALL_RESIDENTS" | "COMMITTEE_ONLY";
+
+export type EventAudience = "ALL_RESIDENTS" | "OWNERS_ONLY" | "COMMITTEE_ONLY";
+
+export type EventRsvpResponse = "GOING" | "NOT_GOING" | "MAYBE";
+
+export interface EventRsvp {
+  id: string;
+  society_id: string;
+  event_id: string;
+  user_id: string;
+  response: EventRsvpResponse;
+  guests_count: number;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+  user?: Profile;
+}
 
 export interface SocietyEvent {
   id: string;
@@ -611,10 +680,100 @@ export interface SocietyEvent {
   organizer_name?: string | null;
   organizer_id?: string | null;
   visibility: EventVisibility;
+  target_audience?: EventAudience;
+  capacity?: number | null;
   status: EventStatus;
   created_at: string;
   updated_at: string;
   organizer?: Profile;
+  rsvp_summary?: {
+    going: number;
+    not_going: number;
+    maybe: number;
+    total_attendees: number;
+  };
+  user_rsvp?: EventRsvp | null;
+}
+
+// ==========================================
+// POLLS & SURVEYS TYPES
+// ==========================================
+
+export type PollType = "SINGLE_CHOICE" | "MULTIPLE_CHOICE";
+export type PollAudience = "ALL_RESIDENTS" | "OWNERS_ONLY" | "COMMITTEE_ONLY";
+export type PollResultsVisibility = "ALWAYS" | "AFTER_VOTING" | "AFTER_CLOSE" | "ADMIN_ONLY";
+export type PollStatus = "DRAFT" | "PUBLISHED" | "CLOSED" | "CANCELLED";
+
+export interface PollOption {
+  id: string;
+  society_id: string;
+  poll_id: string;
+  option_text: string;
+  display_order: number;
+  created_at: string;
+  vote_count?: number;
+  percentage?: number;
+}
+
+export interface PollVote {
+  id: string;
+  society_id: string;
+  poll_id: string;
+  option_id: string;
+  user_id: string;
+  created_at: string;
+  user?: Profile;
+}
+
+export interface SocietyPoll {
+  id: string;
+  society_id: string;
+  title: string;
+  description?: string | null;
+  question: string;
+  poll_type: PollType;
+  target_audience: PollAudience;
+  is_anonymous: boolean;
+  results_visibility: PollResultsVisibility;
+  starts_at: string;
+  ends_at: string;
+  status: PollStatus;
+  created_by: string;
+  updated_by?: string | null;
+  created_at: string;
+  updated_at: string;
+  creator?: Profile;
+  options?: PollOption[];
+  total_votes?: number;
+  unique_voters_count?: number;
+  has_voted?: boolean;
+  user_voted_option_ids?: string[];
+}
+
+// ==========================================
+// ACTIVITY REMINDERS TYPES
+// ==========================================
+
+export type ReminderTargetType = "EVENT" | "POLL";
+export type ReminderType = "HOURS_BEFORE_START" | "HOURS_BEFORE_END" | "EXACT_TIME";
+export type ReminderAudience = "ALL_ELIGIBLE" | "RSVP_GOING" | "NON_VOTERS";
+export type ReminderStatus = "PENDING" | "SENT" | "FAILED" | "CANCELLED";
+
+export interface ActivityReminder {
+  id: string;
+  society_id: string;
+  target_type: ReminderTargetType;
+  target_id: string;
+  reminder_type: ReminderType;
+  trigger_offset_hours?: number | null;
+  scheduled_at: string;
+  audience: ReminderAudience;
+  status: ReminderStatus;
+  sent_at?: string | null;
+  recipients_count?: number;
+  created_by?: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export type MeetingType =
@@ -1296,5 +1455,216 @@ export interface FinancialReport {
   approver?: Profile;
   publisher?: Profile;
 }
+
+// ============================================================================
+// ASSETS & INVENTORY TYPES
+// ============================================================================
+
+export type AssetCategory =
+  | "ELECTRICAL"
+  | "PLUMBING"
+  | "HVAC_LIFTS"
+  | "FIRE_SAFETY"
+  | "SECURITY_SURVEILLANCE"
+  | "DG_POWER"
+  | "CIVIL_INFRASTRUCTURE"
+  | "COMMON_AREA_FURNITURE"
+  | "CLUBHOUSE_GYM"
+  | "GARDENING_LANDSCAPING"
+  | "OFFICE_IT"
+  | "OTHER";
+
+export type AssetStatus =
+  | "ACTIVE"
+  | "UNDER_MAINTENANCE"
+  | "DAMAGED"
+  | "DISPOSED"
+  | "LOST";
+
+export type AssetCondition =
+  | "EXCELLENT"
+  | "GOOD"
+  | "FAIR"
+  | "POOR"
+  | "SCRAP";
+
+export interface Asset {
+  id: string;
+  society_id: string;
+  asset_code: string;
+  name: string;
+  description?: string | null;
+  category: AssetCategory;
+  subcategory?: string | null;
+  building_id?: string | null;
+  wing_id?: string | null;
+  location_description?: string | null;
+  purchase_date?: string | null;
+  purchase_cost: number;
+  vendor_name?: string | null;
+  vendor_id?: string | null;
+  expense_voucher_id?: string | null;
+  status: AssetStatus;
+  condition: AssetCondition;
+  assigned_to?: string | null;
+  department?: string | null;
+  manufacturer?: string | null;
+  model_number?: string | null;
+  serial_number?: string | null;
+  warranty_provider?: string | null;
+  warranty_start?: string | null;
+  warranty_end?: string | null;
+  warranty_terms?: string | null;
+  amc_vendor?: string | null;
+  amc_start?: string | null;
+  amc_end?: string | null;
+  amc_cost: number;
+  amc_terms?: string | null;
+  expected_life_years?: number | null;
+  disposal_date?: string | null;
+  disposal_reason?: string | null;
+  disposal_value?: number;
+  disposed_to?: string | null;
+  photos: string[];
+  notes?: string | null;
+  handover_asset_id?: string | null;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at: string;
+  updated_at: string;
+  building?: Building | null;
+  wing?: Wing | null;
+  assignee?: Profile | null;
+}
+
+export type MaintenanceType =
+  | "PREVENTIVE"
+  | "BREAKDOWN"
+  | "INSPECTION"
+  | "AMC_SERVICE"
+  | "STATUTORY_INSPECTION"
+  | "OVERHAUL"
+  | "OTHER";
+
+export type MaintenanceStatus =
+  | "SCHEDULED"
+  | "IN_PROGRESS"
+  | "COMPLETED"
+  | "CANCELLED";
+
+export interface AssetMaintenanceRecord {
+  id: string;
+  society_id: string;
+  asset_id: string;
+  title: string;
+  maintenance_type: MaintenanceType;
+  status: MaintenanceStatus;
+  service_date: string;
+  completion_date?: string | null;
+  work_description: string;
+  vendor_name?: string | null;
+  technician_name?: string | null;
+  technician_contact?: string | null;
+  cost: number;
+  is_covered_under_warranty: boolean;
+  is_covered_under_amc: boolean;
+  amc_reference?: string | null;
+  expense_voucher_id?: string | null;
+  next_service_date?: string | null;
+  notes?: string | null;
+  attachments: string[];
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at: string;
+  updated_at: string;
+  asset?: Asset;
+  creator?: Profile;
+}
+
+export type InventoryCategory =
+  | "ELECTRICAL"
+  | "PLUMBING"
+  | "HOUSEKEEPING"
+  | "SECURITY_STATIONERY"
+  | "CIVIL_REPAIR"
+  | "HARDWARE_TOOLS"
+  | "GARDENING"
+  | "FIRE_SAFETY"
+  | "OFFICE_SUPPLIES"
+  | "OTHER";
+
+export type UnitOfMeasure =
+  | "PIECES"
+  | "METERS"
+  | "LITERS"
+  | "KGS"
+  | "BOXES"
+  | "PACKETS"
+  | "SETS"
+  | "ROLLS"
+  | "OTHER";
+
+export type InventoryStatus = "ACTIVE" | "DISCONTINUED";
+
+export interface InventoryItem {
+  id: string;
+  society_id: string;
+  item_code: string;
+  name: string;
+  description?: string | null;
+  category: InventoryCategory;
+  unit_of_measure: UnitOfMeasure;
+  opening_quantity: number;
+  current_quantity: number;
+  min_reorder_level: number;
+  unit_cost: number;
+  supplier_name?: string | null;
+  supplier_contact?: string | null;
+  storage_location?: string | null;
+  status: InventoryStatus;
+  notes?: string | null;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type MovementType = "RECEIPT" | "ISSUE" | "ADJUSTMENT" | "RETURN";
+
+export type AdjustmentReason =
+  | "DAMAGED_EXPIRED"
+  | "AUDIT_DISCREPANCY"
+  | "INITIAL_CORRECTION"
+  | "SCRAP"
+  | "THEFT_LOSS"
+  | "OTHER";
+
+export interface InventoryStockMovement {
+  id: string;
+  society_id: string;
+  item_id: string;
+  movement_type: MovementType;
+  quantity: number;
+  quantity_delta: number;
+  balance_before: number;
+  balance_after: number;
+  unit_price: number;
+  total_cost: number;
+  movement_date: string;
+  issued_to_name?: string | null;
+  issued_to_profile_id?: string | null;
+  department?: string | null;
+  purpose?: string | null;
+  building_id?: string | null;
+  unit_id?: string | null;
+  adjustment_reason?: AdjustmentReason | null;
+  notes?: string | null;
+  expense_voucher_id?: string | null;
+  created_by?: string | null;
+  created_at: string;
+  item?: InventoryItem;
+  creator?: Profile;
+}
+
 
 

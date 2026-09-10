@@ -47,6 +47,7 @@ export interface ImpersonationResult {
   success: boolean;
   error?: string;
   sessionId?: string;
+  sessionToken?: string;
   targetRole?: RoleId;
   targetSocietyId?: string;
 }

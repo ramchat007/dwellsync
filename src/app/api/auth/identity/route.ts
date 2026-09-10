@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getCurrentIdentity } from "@/lib/auth/server";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
     const identity = await getCurrentIdentity();
