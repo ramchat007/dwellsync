@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth/client";
 import { SocietySwitcher } from "./SocietySwitcher";
 import { ImpersonationBanner } from "@/components/auth/ImpersonationBanner";
 import { NotificationBell } from "./NotificationBell";
+import { LanguageSelector } from "./LanguageSelector";
 import { LogOut, User, Shield, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -43,6 +44,7 @@ export function Topbar() {
         </div>
 
         <div className="flex items-center gap-3">
+          <LanguageSelector />
           <NotificationBell />
           <div className="hidden sm:flex items-center gap-2 text-xs">
             <div className="w-7 h-7 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-[11px]">

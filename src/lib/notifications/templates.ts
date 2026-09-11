@@ -1,4 +1,5 @@
 import { NotificationType, NotificationCategory } from './types';
+import { Locale } from '../i18n/types';
 
 export interface NotificationTemplateDefinition {
   category: NotificationCategory;
@@ -70,6 +71,30 @@ export const NOTIFICATION_TEMPLATES: Record<NotificationType, NotificationTempla
     titleTemplate: (p) => 'Complaint Closed: #' + (p.ticketNumber || p.complaintId || ''),
     bodyTemplate: (p) => 'Your ticket has been closed.',
     actionUrlTemplate: (p) => '/resident/complaints?id=' + (p.complaintId || ''),
+  },
+  COMPLAINT_REOPENED: {
+    category: 'COMPLAINTS',
+    titleTemplate: (p) => 'Complaint Reopened: #' + (p.ticketNumber || p.complaintId || ''),
+    bodyTemplate: (p) => 'Ticket has been reopened. Reason: ' + (p.reason || 'Unresolved issue'),
+    actionUrlTemplate: (p) => '/resident/complaints?id=' + (p.complaintId || ''),
+  },
+  COMPLAINT_SLA_WARNING: {
+    category: 'COMPLAINTS',
+    titleTemplate: (p) => 'SLA Warning: Ticket #' + (p.ticketNumber || p.complaintId || ''),
+    bodyTemplate: (p) => 'Ticket "' + (p.title || 'Complaint') + '" is approaching resolution deadline (due soon).',
+    actionUrlTemplate: (p) => '/society/' + (p.societyId || '') + '/complaints',
+  },
+  COMPLAINT_SLA_BREACHED: {
+    category: 'COMPLAINTS',
+    titleTemplate: (p) => 'SLA Breached: Ticket #' + (p.ticketNumber || p.complaintId || ''),
+    bodyTemplate: (p) => 'Ticket "' + (p.title || 'Complaint') + '" has breached its ' + (p.breachType || 'resolution') + ' SLA target.',
+    actionUrlTemplate: (p) => '/society/' + (p.societyId || '') + '/complaints',
+  },
+  COMPLAINT_ESCALATED: {
+    category: 'COMPLAINTS',
+    titleTemplate: (p) => 'Ticket Escalated (Level ' + (p.level || 1) + '): #' + (p.ticketNumber || p.complaintId || ''),
+    bodyTemplate: (p) => 'Ticket "' + (p.title || 'Complaint') + '" has been escalated to Level ' + (p.level || 1) + '. Reason: ' + (p.reason || 'SLA overdue'),
+    actionUrlTemplate: (p) => '/society/' + (p.societyId || '') + '/complaints',
   },
 
   // Maintenance & Billing
@@ -279,15 +304,196 @@ export const NOTIFICATION_TEMPLATES: Record<NotificationType, NotificationTempla
   },
 };
 
+const MARATHI_TEMPLATES: Partial<Record<NotificationType, { titleTemplate?: (p: Record<string, any>) => string; bodyTemplate?: (p: Record<string, any>) => string }>> = {
+  VISITOR_INVITED: {
+    titleTemplate: (p) => 'पास कोड तयार केला: ' + (p.visitorName || 'अभ्यागत'),
+    bodyTemplate: (p) => (p.visitorName || 'तुमच्या अभ्यागता') + 'साठी पूर्व-मंजूर पास कोड ' + (p.passCode || '') + ' तयार केला आहे.',
+  },
+  VISITOR_APPROVED: {
+    titleTemplate: (p) => 'अभ्यागत मंजूर: ' + (p.visitorName || 'अभ्यागत'),
+    bodyTemplate: (p) => (p.visitorName || 'अभ्यागत') + ' यांना गेट प्रवेशासाठी मंजुरी मिळाली आहे.',
+  },
+  VISITOR_CHECKED_IN: {
+    titleTemplate: (p) => 'अभ्यागत आगमन: ' + (p.visitorName || 'अभ्यागत'),
+    bodyTemplate: (p) => (p.visitorName || 'अभ्यागत') + ' यांनी फ्लॅट ' + (p.unitNumber || '') + ' साठी गेटवर चेक-इन केले आहे.',
+  },
+  VISITOR_CHECKED_OUT: {
+    titleTemplate: (p) => 'अभ्यागत रवाना: ' + (p.visitorName || 'अभ्यागत'),
+    bodyTemplate: (p) => (p.visitorName || 'अभ्यागत') + ' गेटवरून बाहेर पडले आहेत.',
+  },
+  VISITOR_CANCELLED: {
+    titleTemplate: (p) => 'अभ्यागत रद्द: ' + (p.visitorName || 'अभ्यागत'),
+    bodyTemplate: (p) => (p.visitorName || 'अभ्यागत') + ' चा पास रद्द करण्यात आला आहे.',
+  },
+  COMPLAINT_SUBMITTED: {
+    titleTemplate: (p) => 'तक्रार नोंदवली: #' + (p.ticketNumber || p.complaintId || ''),
+    bodyTemplate: (p) => 'तुमची तक्रार "' + (p.title || 'मदत विनंती') + '" नोंदवली गेली आहे.',
+  },
+  COMPLAINT_ASSIGNED: {
+    titleTemplate: (p) => 'तक्रार सोपवली: #' + (p.ticketNumber || p.complaintId || ''),
+    bodyTemplate: (p) => 'तुमचे तिकीट ' + (p.assignedTo || 'तंत्रज्ञांकडे') + ' सोपवले आहे.',
+  },
+  COMPLAINT_STATUS_CHANGED: {
+    titleTemplate: (p) => 'तक्रार स्थिती: #' + (p.ticketNumber || p.complaintId || ''),
+    bodyTemplate: (p) => 'स्थिती अद्ययावत केली: ' + (p.status || 'अद्ययावत') + (p.remarks ? '. ' + p.remarks : ''),
+  },
+  COMPLAINT_RESOLVED: {
+    titleTemplate: (p) => 'तक्रार निवारण पूर्ण: #' + (p.ticketNumber || p.complaintId || ''),
+    bodyTemplate: (p) => 'तुमची तक्रार निवारण पूर्ण म्हणून चिन्हांकित केली आहे.',
+  },
+  COMPLAINT_CLOSED: {
+    titleTemplate: (p) => 'तक्रार बंद केली: #' + (p.ticketNumber || p.complaintId || ''),
+    bodyTemplate: (p) => 'तुमचे तिकीट बंद केले आहे.',
+  },
+  COMPLAINT_REOPENED: {
+    titleTemplate: (p) => 'तक्रार पुन्हा उघडली: #' + (p.ticketNumber || p.complaintId || ''),
+    bodyTemplate: (p) => 'तक्रार पुन्हा उघडली आहे. कारण: ' + (p.reason || 'अनिराकरण'),
+  },
+  INVOICE_GENERATED: {
+    titleTemplate: (p) => 'नवीन देखभाल चलन: ' + (p.invoiceNumber || ''),
+    bodyTemplate: (p) => (p.period || 'कालावधी') + ' साठी ₹' + (p.amount || 0) + ' चे चलन जारी केले आहे. देय तारीख: ' + (p.dueDate || 'लागू नाही') + '.',
+  },
+  PAYMENT_RECORDED: {
+    titleTemplate: (p) => 'पेमेंट प्राप्त झाले: ₹' + (p.amount || 0),
+    bodyTemplate: (p) => 'चलन ' + (p.invoiceNumber || '') + ' साठी ₹' + (p.amount || 0) + ' चे पेमेंट नोंदवले. पावती #' + (p.receiptNumber || '') + '.',
+  },
+  RECEIPT_GENERATED: {
+    titleTemplate: (p) => 'पावती तयार केली: #' + (p.receiptNumber || ''),
+    bodyTemplate: (p) => '₹' + (p.amount || 0) + ' च्या देयकाची अधिकृत पावती आता उपलब्ध आहे.',
+  },
+  NOTICE_PUBLISHED: {
+    titleTemplate: (p) => 'सूचना: ' + (p.noticeTitle || 'नवीन सूचना'),
+    bodyTemplate: (p) => p.summary || p.body || 'प्रशासनाकडून नवीन सूचना प्रसिद्ध केली आहे.',
+  },
+  IMPORTANT_NOTICE_PUBLISHED: {
+    titleTemplate: (p) => 'तातडीची सूचना: ' + (p.noticeTitle || 'सूचना'),
+    bodyTemplate: (p) => p.summary || p.body || 'तातडीची सूचना प्रसिद्ध करण्यात आली आहे.',
+  },
+  EVENT_PUBLISHED: {
+    titleTemplate: (p) => 'नवीन कार्यक्रम: ' + (p.eventTitle || 'कार्यक्रम'),
+    bodyTemplate: (p) => (p.date || 'आगामी') + ' रोजी आयोजित ' + (p.eventTitle || 'सोसायटी कार्यक्रमात') + ' सहभागी व्हा.',
+  },
+  POLL_PUBLISHED: {
+    titleTemplate: (p) => 'नवीन सोसायटी मतदान: ' + (p.pollTitle || 'मतदान'),
+    bodyTemplate: (p) => 'आपले मत महत्त्वाचे आहे! "' + (p.pollTitle || 'मतदान') + '" मध्ये सहभागी व्हा.',
+  },
+  MEETING_SCHEDULED: {
+    titleTemplate: (p) => 'बैठक नियोजित: ' + (p.meetingTitle || 'बैठक'),
+    bodyTemplate: (p) => (p.date || '') + ' रोजी बैठक आयोजित केली आहे. विषय: ' + (p.agenda || 'सर्वसाधारण चर्चा') + '.',
+  },
+  MEETING_PUBLISHED: {
+    titleTemplate: (p) => 'बैठक नियोजित: ' + (p.meetingTitle || 'बैठक'),
+    bodyTemplate: (p) => (p.date || '') + ' रोजी बैठक आयोजित केली आहे. विषय: ' + (p.agenda || 'सर्वसाधारण चर्चा') + '.',
+  },
+};
+
+const HINDI_TEMPLATES: Partial<Record<NotificationType, { titleTemplate?: (p: Record<string, any>) => string; bodyTemplate?: (p: Record<string, any>) => string }>> = {
+  VISITOR_INVITED: {
+    titleTemplate: (p) => 'पास कोड तैयार हुआ: ' + (p.visitorName || 'अतिथि'),
+    bodyTemplate: (p) => (p.visitorName || 'आपके अतिथि') + ' के लिए पूर्व-स्वीकृत पास कोड ' + (p.passCode || '') + ' तैयार किया गया है।',
+  },
+  VISITOR_APPROVED: {
+    titleTemplate: (p) => 'अतिथि स्वीकृत: ' + (p.visitorName || 'अतिथि'),
+    bodyTemplate: (p) => (p.visitorName || 'अतिथि') + ' को गेट प्रवेश के लिए मंजूरी मिल गई है।',
+  },
+  VISITOR_CHECKED_IN: {
+    titleTemplate: (p) => 'अतिथि आगमन: ' + (p.visitorName || 'अतिथि'),
+    bodyTemplate: (p) => (p.visitorName || 'अतिथि') + ' ने फ्लैट ' + (p.unitNumber || '') + ' के लिए गेट पर चेक-इन किया है।',
+  },
+  VISITOR_CHECKED_OUT: {
+    titleTemplate: (p) => 'अतिथि प्रस्थान: ' + (p.visitorName || 'अतिथि'),
+    bodyTemplate: (p) => (p.visitorName || 'अतिथि') + ' गेट से बाहर चले गए हैं।',
+  },
+  VISITOR_CANCELLED: {
+    titleTemplate: (p) => 'अतिथि रद्द: ' + (p.visitorName || 'अतिथि'),
+    bodyTemplate: (p) => (p.visitorName || 'अतिथि') + ' का पास रद्द कर दिया गया है।',
+  },
+  COMPLAINT_SUBMITTED: {
+    titleTemplate: (p) => 'शिकायत दर्ज की गई: #' + (p.ticketNumber || p.complaintId || ''),
+    bodyTemplate: (p) => 'आपकी शिकायत "' + (p.title || 'सहायता अनुरोध') + '" दर्ज कर ली गई है।',
+  },
+  COMPLAINT_ASSIGNED: {
+    titleTemplate: (p) => 'शिकायत सौंपी गई: #' + (p.ticketNumber || p.complaintId || ''),
+    bodyTemplate: (p) => 'आपका टिकट ' + (p.assignedTo || 'तकनीशियन') + ' को सौंपा गया है।',
+  },
+  COMPLAINT_STATUS_CHANGED: {
+    titleTemplate: (p) => 'शिकायत स्थिति: #' + (p.ticketNumber || p.complaintId || ''),
+    bodyTemplate: (p) => 'स्थिति अपडेट की गई: ' + (p.status || 'अपडेट') + (p.remarks ? '. ' + p.remarks : ''),
+  },
+  COMPLAINT_RESOLVED: {
+    titleTemplate: (p) => 'शिकायत का समाधान हुआ: #' + (p.ticketNumber || p.complaintId || ''),
+    bodyTemplate: (p) => 'आपकी शिकायत का समाधान कर दिया गया है।',
+  },
+  COMPLAINT_CLOSED: {
+    titleTemplate: (p) => 'शिकायत बंद की गई: #' + (p.ticketNumber || p.complaintId || ''),
+    bodyTemplate: (p) => 'आपका टिकट बंद कर दिया गया है।',
+  },
+  COMPLAINT_REOPENED: {
+    titleTemplate: (p) => 'शिकायत पुनः खोली गई: #' + (p.ticketNumber || p.complaintId || ''),
+    bodyTemplate: (p) => 'शिकायत पुनः खोल दी गई है। कारण: ' + (p.reason || 'अनिराकरण'),
+  },
+  INVOICE_GENERATED: {
+    titleTemplate: (p) => 'नया रखरखाव चालान: ' + (p.invoiceNumber || ''),
+    bodyTemplate: (p) => (p.period || 'अवधि') + ' के लिए ₹' + (p.amount || 0) + ' का चालान जारी किया गया है। नियत तिथि: ' + (p.dueDate || 'लागू नहीं') + '।',
+  },
+  PAYMENT_RECORDED: {
+    titleTemplate: (p) => 'भुगतान की पुष्टि: ₹' + (p.amount || 0),
+    bodyTemplate: (p) => 'चालान ' + (p.invoiceNumber || '') + ' के लिए ₹' + (p.amount || 0) + ' का भुगतान दर्ज किया गया। रसीद #' + (p.receiptNumber || '') + '।',
+  },
+  RECEIPT_GENERATED: {
+    titleTemplate: (p) => 'रसीद जनरेट हुई: #' + (p.receiptNumber || ''),
+    bodyTemplate: (p) => '₹' + (p.amount || 0) + ' के भुगतान की आधिकारिक रसीद अब उपलब्ध है।',
+  },
+  NOTICE_PUBLISHED: {
+    titleTemplate: (p) => 'सूचना: ' + (p.noticeTitle || 'नई सूचना'),
+    bodyTemplate: (p) => p.summary || p.body || 'प्रशासन द्वारा एक नई सूचना जारी की गई है।',
+  },
+  IMPORTANT_NOTICE_PUBLISHED: {
+    titleTemplate: (p) => 'आवश्यक सूचना: ' + (p.noticeTitle || 'सूचना'),
+    bodyTemplate: (p) => p.summary || p.body || 'एक आवश्यक सूचना प्रकाशित की गई है।',
+  },
+  EVENT_PUBLISHED: {
+    titleTemplate: (p) => 'नया कार्यक्रम: ' + (p.eventTitle || 'कार्यक्रम'),
+    bodyTemplate: (p) => (p.date || 'आगामी') + ' को आयोजित ' + (p.eventTitle || 'सोसायटी कार्यक्रम') + ' में भाग लें।',
+  },
+  POLL_PUBLISHED: {
+    titleTemplate: (p) => 'नया सोसायटी मतदान: ' + (p.pollTitle || 'मतदान'),
+    bodyTemplate: (p) => 'आपका वोट महत्वपूर्ण है! "' + (p.pollTitle || 'मतदान') + '" में भाग लें।',
+  },
+  MEETING_SCHEDULED: {
+    titleTemplate: (p) => 'बैठक निर्धारित: ' + (p.meetingTitle || 'बैठक'),
+    bodyTemplate: (p) => (p.date || '') + ' को बैठक निर्धारित की गई है। एजेंडा: ' + (p.agenda || 'सामान्य चर्चा') + '।',
+  },
+  MEETING_PUBLISHED: {
+    titleTemplate: (p) => 'बैठक निर्धारित: ' + (p.meetingTitle || 'बैठक'),
+    bodyTemplate: (p) => (p.date || '') + ' को बैठक निर्धारित की गई है। एजेंडा: ' + (p.agenda || 'सामान्य चर्चा') + '।',
+  },
+};
+
 export function renderNotificationTemplate(
   type: NotificationType,
-  variables: Record<string, any>
+  variables: Record<string, any>,
+  locale: Locale = 'en'
 ): { category: NotificationCategory; title: string; body: string; actionUrl?: string } {
-  const template = NOTIFICATION_TEMPLATES[type] || NOTIFICATION_TEMPLATES.GENERAL_ANNOUNCEMENT;
+  const base = NOTIFICATION_TEMPLATES[type] || NOTIFICATION_TEMPLATES.GENERAL_ANNOUNCEMENT;
+
+  let title = base.titleTemplate(variables);
+  let body = base.bodyTemplate(variables);
+
+  if (locale === 'mr') {
+    const mr = MARATHI_TEMPLATES[type];
+    if (mr?.titleTemplate) title = mr.titleTemplate(variables);
+    if (mr?.bodyTemplate) body = mr.bodyTemplate(variables);
+  } else if (locale === 'hi') {
+    const hi = HINDI_TEMPLATES[type];
+    if (hi?.titleTemplate) title = hi.titleTemplate(variables);
+    if (hi?.bodyTemplate) body = hi.bodyTemplate(variables);
+  }
+
   return {
-    category: template.category,
-    title: template.titleTemplate(variables),
-    body: template.bodyTemplate(variables),
-    actionUrl: template.actionUrlTemplate ? template.actionUrlTemplate(variables) : undefined,
+    category: base.category,
+    title,
+    body,
+    actionUrl: base.actionUrlTemplate ? base.actionUrlTemplate(variables) : undefined,
   };
 }

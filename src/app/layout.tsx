@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth/client";
+import { LanguageProvider } from "@/lib/i18n/context";
 import { ImpersonationBanner } from "@/components/auth/ImpersonationBanner";
 
 export const metadata: Metadata = {
@@ -19,6 +20,10 @@ export default function RootLayout({
         <AuthProvider>
           {/* <ImpersonationBanner /> */}
           <div className="flex-1 flex flex-col">{children}</div>
+          <LanguageProvider>
+            {/* <ImpersonationBanner /> */}
+            <div className="flex-1 flex flex-col">{children}</div>
+          </LanguageProvider>
         </AuthProvider>
       </body>
     </html>

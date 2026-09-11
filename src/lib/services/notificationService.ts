@@ -9,6 +9,7 @@ import {
   SendNotificationResult,
 } from '../notifications/types';
 import { renderNotificationTemplate } from '../notifications/templates';
+import { Locale } from '../i18n/types';
 import {
   inAppProvider,
   simulatedEmailProvider,
@@ -110,18 +111,32 @@ export async function sendDomainNotification(
       };
     }
 
-    // 2. Render content from template
-    const rendered = renderNotificationTemplate(type, data);
-    const category: NotificationCategory = params.category || rendered.category;
-    const title = rendered.title;
-    const body = rendered.body;
-    const actionUrl = params.actionUrl || rendered.actionUrl || null;
+    // 2. Pre-fetch recipient profiles (email, phone, preferred_language)
+    const { data: recipientProfiles } = await adminClient
+      .from('profiles')
+      .select('id, email, phone, preferred_language')
+      .in('id', recipientIds);
+
+    const profileMap = new Map<string, { email: string | null; phone: string | null; preferred_language: Locale }>();
+    if (recipientProfiles) {
+      recipientProfiles.forEach((p: any) => {
+        profileMap.set(p.id, {
+          email: p.email || null,
+          phone: p.phone || null,
+          preferred_language: (p.preferred_language as Locale) || 'en',
+        });
+      });
+    }
+
+    const defaultRendered = renderNotificationTemplate(type, data);
+    const category: NotificationCategory = params.category || defaultRendered.category;
 
     const createdNotificationIds: string[] = [];
     const channelsAttemptedSet = new Set<NotificationChannel>();
     let skippedCount = 0;
 
     // 3. Process each recipient with tenant isolation and preferences check
+    // 3. Process each recipient with tenant isolation, localized template, and preferences check
     for (const recipientId of recipientIds) {
       // Check deduplication key if specified
       if (dedupKey) {
@@ -162,21 +177,16 @@ export async function sendDomainNotification(
         continue;
       }
 
-      // Fetch recipient contact info for external channels if needed
-      let userEmail: string | null = null;
-      let userPhone: string | null = null;
-      if (emailEnabled || smsEnabled || waEnabled) {
-        const { data: profile } = await adminClient
-          .from('profiles')
-          .select('email, phone')
-          .eq('id', recipientId)
-          .maybeSingle();
-
-        if (profile) {
-          userEmail = profile.email || null;
-          userPhone = profile.phone || null;
-        }
-      }
+      // Resolve recipient contact info and locale
+      const recipientProfile = profileMap.get(recipientId);
+      const userEmail: string | null = recipientProfile?.email || null;
+      const userPhone: string | null = recipientProfile?.phone || null;
+      const recipientLocale: Locale = recipientProfile?.preferred_language || 'en';
+      // Render localized content for this recipient
+      const rendered = renderNotificationTemplate(type, data, recipientLocale);
+      const title = rendered.title;
+      const body = rendered.body;
+      const actionUrl = params.actionUrl || rendered.actionUrl || null;
 
       // 4. Create in-app notification record if in-app enabled
       let notificationId: string | null = null;

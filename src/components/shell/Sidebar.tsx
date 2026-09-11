@@ -33,8 +33,10 @@ import {
   Banknote,
   Boxes,
   Package,
+  CreditCard,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useTranslation } from "@/lib/i18n/context";
 
 const ICON_MAP: Record<string, React.ElementType> = {
   LayoutDashboard,
@@ -62,16 +64,63 @@ const ICON_MAP: Record<string, React.ElementType> = {
   Banknote,
   Boxes,
   Package,
+  CreditCard,
 };
 
 export function Sidebar({ className }: { className?: string }) {
   const pathname = usePathname();
   const { currentRole, currentSociety, isSuperAdmin, isImpersonating } = useAuth();
+  const { t } = useTranslation();
 
   // Navigation is strictly derived from effective role and society context
   const navItems = getNavigationForRole(currentRole, currentSociety?.id);
 
   const isSuperAdminContext = currentRole === "SUPER_ADMIN" && !isImpersonating;
+
+  const getLabel = (label: string): string => {
+    switch (label.toLowerCase()) {
+      case "dashboard":
+        return t("nav.dashboard");
+      case "home":
+      case "my home":
+        return t("nav.home");
+      case "dues":
+      case "dues & bills":
+        return t("nav.dues");
+      case "family":
+        return t("nav.family");
+      case "visitors":
+      case "gate passes":
+        return t("nav.gatePasses");
+      case "complaints":
+        return t("nav.complaints");
+      case "amenities":
+        return t("nav.amenities");
+      case "events":
+      case "events & polls":
+        return t("events.eventsAndPolls");
+      case "polls":
+        return t("nav.polls");
+      case "notices":
+        return t("nav.notices");
+      case "documents":
+        return t("nav.documents");
+      case "community":
+        return t("nav.community");
+      case "society info":
+        return t("nav.societyInfo");
+      case "accounting":
+        return t("nav.accounting");
+      case "finance":
+        return t("nav.finance");
+      case "settings":
+        return t("nav.settings");
+      case "helpdesk":
+        return t("nav.helpdesk");
+      default:
+        return label;
+    }
+  };
 
   return (
     <aside
@@ -119,6 +168,7 @@ export function Sidebar({ className }: { className?: string }) {
             >
               <Icon className="w-4 h-4 shrink-0" />
               <span className="truncate">{item.label}</span>
+              <span className="truncate">{getLabel(item.label)}</span>
             </Link>
           );
         })}

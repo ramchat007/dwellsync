@@ -16,29 +16,18 @@ export const ComplaintCategoryEnum = z.enum([
   "OTHER",
 ]);
 
-export const ComplaintPriorityEnum = z.enum(["LOW", "MEDIUM", "HIGH", "EMERGENCY"]);
-
-export const ComplaintStatusEnum = z.enum([
-  "SUBMITTED",
-  "ASSIGNED",
-  "IN_PROGRESS",
-  "RESOLVED",
-  "CLOSED",
-]);
-
-export const CreateComplaintSchema = z.object({
-  unit_id: z.string().uuid("Invalid unit ID").optional().nullable().or(z.literal("")),
-  title: z.string().min(3, "Title must be at least 3 characters.").max(150),
-  description: z.string().min(5, "Please provide detailed description.").max(2000),
-  category: ComplaintCategoryEnum,
-  priority: ComplaintPriorityEnum.default("MEDIUM"),
-});
-
-export const UpdateComplaintSchema = z.object({
-  status: ComplaintStatusEnum.optional(),
-  assigned_to: z.string().uuid("Invalid staff ID").optional().nullable().or(z.literal("")),
-  resolution_notes: z.string().max(2000).optional().nullable().or(z.literal("")),
-});
+export {
+  ComplaintPriorityEnum,
+  ComplaintStatusEnum,
+  ComplaintSlaStatusEnum,
+  OnHoldReasonEnum,
+  CreateComplaintSchema,
+  UpdateComplaintSchema,
+  ReopenComplaintSchema,
+  CloseComplaintSchema,
+  ComplaintSlaConfigSchema,
+  ComplaintEscalationRuleSchema,
+} from "./complaints";
 
 // ==========================================
 // AMENITIES SCHEMAS

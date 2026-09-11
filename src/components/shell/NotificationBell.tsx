@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Bell, Check, CheckCheck, Loader2, ExternalLink, ShieldAlert, FileText, Wrench, Receipt, Calendar, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "@/lib/i18n/context";
 
 interface NotificationItem {
   id: string;
@@ -19,6 +20,7 @@ interface NotificationItem {
 }
 
 export function NotificationBell() {
+  const { t } = useTranslation();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [isOpen, setIsOpen] = useState<boolean>(false);
@@ -142,6 +144,7 @@ export function NotificationBell() {
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
             <div className="flex items-center space-x-2">
               <span className="font-bold text-sm text-slate-900 dark:text-white">Notifications</span>
+              <span className="font-bold text-sm text-slate-900 dark:text-white">{t("notifications.notifications")}</span>
               {unreadCount > 0 && (
                 <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 rounded-full">
                   {unreadCount} unread
@@ -155,6 +158,7 @@ export function NotificationBell() {
               >
                 <CheckCheck className="w-3.5 h-3.5" />
                 <span>Mark all read</span>
+                <span>{t("notifications.markAllRead")}</span>
               </button>
             )}
           </div>
@@ -165,10 +169,12 @@ export function NotificationBell() {
               <div className="flex items-center justify-center py-8 text-slate-400 text-xs">
                 <Loader2 className="w-4 h-4 animate-spin mr-2" />
                 Loading alerts...
+                {t("common.loading")}
               </div>
             ) : notifications.length === 0 ? (
               <div className="py-8 text-center text-slate-500 text-xs">
                 No notifications right now
+                {t("notifications.noNotifications")}
               </div>
             ) : (
               notifications.map((n) => (
@@ -241,6 +247,7 @@ export function NotificationBell() {
               className="text-slate-500 hover:text-slate-700 dark:text-slate-400 text-[11px]"
             >
               Close
+              {t("common.close")}
             </button>
           </div>
         </div>

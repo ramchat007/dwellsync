@@ -6,6 +6,7 @@ import { ResidentBottomNav } from "@/components/resident/ResidentBottomNav";
 import { ImpersonationBanner } from "@/components/auth/ImpersonationBanner";
 import { SocietySwitcher } from "@/components/shell/SocietySwitcher";
 import { NotificationBell } from "@/components/shell/NotificationBell";
+import { LanguageSelector } from "@/components/shell/LanguageSelector";
 import { Building2, Shield, LogOut, Settings, Home, Users, FileText, Bell, User } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -133,6 +134,7 @@ export default async function ResidentLayout({
               </div>
             )}
 
+            <LanguageSelector />
             <NotificationBell />
 
             <Link

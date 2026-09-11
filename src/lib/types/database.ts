@@ -171,6 +171,7 @@ export interface Profile {
   phone: string | null;
   alternate_phone?: string | null;
   status: ProfileStatus;
+  preferred_language?: "en" | "mr" | "hi";
   created_at: string;
   updated_at: string;
 }
@@ -560,14 +561,32 @@ export type ComplaintCategory =
   | "CLEANLINESS"
   | "OTHER";
 
-export type ComplaintPriority = "LOW" | "MEDIUM" | "HIGH" | "EMERGENCY";
+export type ComplaintPriority = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL" | "EMERGENCY";
 
 export type ComplaintStatus =
   | "SUBMITTED"
+  | "NEW"
+  | "ACKNOWLEDGED"
   | "ASSIGNED"
   | "IN_PROGRESS"
+  | "ON_HOLD"
   | "RESOLVED"
-  | "CLOSED";
+  | "CLOSED"
+  | "REOPENED";
+
+export type ComplaintSlaStatus =
+  | "ON_TRACK"
+  | "DUE_SOON"
+  | "BREACHED"
+  | "PAUSED"
+  | "COMPLETED";
+
+export type ComplaintOnHoldReason =
+  | "WAITING_FOR_PARTS"
+  | "WAITING_FOR_RESIDENT_INPUT"
+  | "THIRD_PARTY_VENDOR"
+  | "RESIDENT_UNAVAILABLE"
+  | "OTHER";
 
 export interface Complaint {
   id: string;
@@ -577,8 +596,22 @@ export interface Complaint {
   title: string;
   description: string;
   category: ComplaintCategory;
+  subcategory?: string | null;
   priority: ComplaintPriority;
   status: ComplaintStatus;
+  sla_status?: ComplaintSlaStatus;
+  sla_cycle_number?: number;
+  response_due_at?: string | null;
+  responded_at?: string | null;
+  resolution_due_at?: string | null;
+  sla_paused_at?: string | null;
+  total_paused_duration_minutes?: number;
+  on_hold_reason?: string | null;
+  closure_reason?: string | null;
+  is_response_breached?: boolean;
+  is_resolution_breached?: boolean;
+  escalation_level?: number;
+  last_escalated_at?: string | null;
   assigned_to?: string | null;
   resolved_at?: string | null;
   closed_at?: string | null;
@@ -588,6 +621,63 @@ export interface Complaint {
   unit?: Unit;
   creator?: Profile;
   assignee?: Profile;
+}
+
+export interface ComplaintSlaConfig {
+  id: string;
+  society_id: string;
+  category: ComplaintCategory | "ALL";
+  priority: ComplaintPriority | "ALL";
+  response_time_hours: number;
+  resolution_time_hours: number;
+  business_hours_only: boolean;
+  business_hours_start?: string | null;
+  business_hours_end?: string | null;
+  exclude_weekends: boolean;
+  effective_from: string;
+  effective_to?: string | null;
+  is_active: boolean;
+  created_by?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ComplaintSlaEvent {
+  id: string;
+  society_id: string;
+  complaint_id: string;
+  cycle_number: number;
+  event_type:
+    | "CREATED"
+    | "ACKNOWLEDGED"
+    | "ASSIGNED"
+    | "STATUS_CHANGE"
+    | "PRIORITY_CHANGE"
+    | "SLA_PAUSED"
+    | "SLA_RESUMED"
+    | "RESOLVED"
+    | "CLOSED"
+    | "REOPENED"
+    | "ESCALATED"
+    | "NOTE_ADDED";
+  from_status?: string | null;
+  to_status?: string | null;
+  actor_id?: string | null;
+  notes?: string | null;
+  metadata?: Record<string, any>;
+  created_at: string;
+  actor?: Profile;
+}
+
+export interface ComplaintEscalationRule {
+  id: string;
+  society_id: string;
+  level: 1 | 2 | 3;
+  trigger_condition: "BREACH_RESPONSE" | "BREACH_RESOLUTION" | "CRITICAL_UNASSIGNED_1H" | "DUE_SOON_2H";
+  notify_roles: string[];
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export type AmenityCategory =
@@ -1664,6 +1754,94 @@ export interface InventoryStockMovement {
   created_at: string;
   item?: InventoryItem;
   creator?: Profile;
+}
+
+// ==========================================
+// PRICING & SUBSCRIPTION ARCHITECTURE
+// ==========================================
+
+export type PlanCode = "FREE" | "BASIC" | "PROFESSIONAL" | "ENTERPRISE";
+
+export type SubscriptionStatus = "TRIAL" | "ACTIVE" | "PAST_DUE" | "CANCELLED" | "EXPIRED";
+
+export type SubscriptionBillingCycle = "monthly" | "annual";
+
+export type EntitledFeature =
+  | "units"
+  | "residents"
+  | "buildings"
+  | "gate_passes"
+  | "complaints"
+  | "notices"
+  | "documents"
+  | "events_polls"
+  | "maintenance_billing"
+  | "amenities"
+  | "governance_meetings"
+  | "committees"
+  | "analytics_basic"
+  | "analytics_advanced"
+  | "sla_management"
+  | "assets_inventory"
+  | "finance_ledger"
+  | "builder_handover"
+  | "custom_branding";
+
+export interface FeatureLimits {
+  max_units?: number;
+  max_buildings?: number;
+  max_residents?: number;
+  max_storage_mb?: number;
+  max_active_complaints?: number;
+  max_events_per_month?: number;
+  max_polls_per_month?: number;
+  max_staff_members?: number;
+  max_invoices_per_month?: number;
+  [key: string]: number | undefined;
+}
+
+export interface SubscriptionPlan {
+  id: string;
+  code: PlanCode;
+  name: string;
+  description: string | null;
+  is_active: boolean;
+  monthly_price: number;
+  annual_price: number;
+  currency: string;
+  feature_limits: FeatureLimits;
+  enabled_features: EntitledFeature[];
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SocietySubscription {
+  id: string;
+  society_id: string;
+  plan_id: string;
+  status: SubscriptionStatus;
+  billing_cycle: SubscriptionBillingCycle;
+  trial_start_date?: string | null;
+  trial_end_date?: string | null;
+  current_period_start: string;
+  current_period_end: string;
+  cancel_at_period_end: boolean;
+  cancelled_at?: string | null;
+  provider: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+  plan?: SubscriptionPlan;
+  society?: Society;
+}
+
+export interface EntitlementCheckResult {
+  allowed: boolean;
+  reason?: "ACTIVE" | "FEATURE_DISABLED" | "LIMIT_EXCEEDED" | "PLAN_EXPIRED" | "NO_SUBSCRIPTION";
+  limit?: number | null;
+  current?: number;
+  feature: string;
 }
 
 

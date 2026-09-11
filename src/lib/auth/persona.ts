@@ -174,6 +174,7 @@ export function getNavigationForRole(
       { label: "Platform Overview", href: "/superadmin", iconName: "LayoutDashboard" },
       { label: "Platform Analytics", href: "/superadmin/analytics", iconName: "BarChart3" },
       { label: "Societies Registry", href: "/superadmin/societies", iconName: "Building2" },
+      { label: "Plans & Subscriptions", href: "/superadmin/subscriptions", iconName: "CreditCard" },
       { label: "Platform Users", href: "/superadmin/users", iconName: "Users" },
       { label: "Audit Ledger", href: "/superadmin/audit", iconName: "Activity" },
     ];
@@ -199,6 +200,7 @@ export function getNavigationForRole(
       { label: "Documents", href: `/society/${sid}/documents`, iconName: "FileText" },
       { label: "Handover", href: `/society/${sid}/handover`, iconName: "ClipboardList" },
       { label: "Assets & Inventory", href: `/society/${sid}/assets`, iconName: "Boxes" },
+      { label: "Subscription & Limits", href: `/society/${sid}/subscription`, iconName: "CreditCard" },
       { label: "Society Settings", href: `/society/${sid}/society`, iconName: "Settings" },
     ];
   }

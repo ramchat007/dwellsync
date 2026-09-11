@@ -3,7 +3,13 @@ import { getCurrentIdentity } from "@/lib/auth/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { recordAuditLog } from "@/lib/auth/audit";
 import { validateResidentUnitAccess } from "@/lib/auth/units";
-import { CreateComplaintSchema } from "@/lib/validations/operations";
+import { CreateComplaintSchema } from "@/lib/validations/complaints";
+import {
+  calculateDeadlines,
+  getSlaConfigForComplaint,
+  evaluateSlaStatus,
+  logComplaintTimelineEvent,
+} from "@/lib/services/slaService";
 
 export const dynamic = "force-dynamic";
 
@@ -53,6 +59,19 @@ export async function GET() {
     }
 
     return NextResponse.json({ complaints: complaints || [] });
+    const now = new Date();
+    const evaluatedComplaints = (complaints || []).map((c) => {
+      const evalResult = evaluateSlaStatus(c, now);
+      return {
+        ...c,
+        sla_status: evalResult.slaStatus,
+        is_response_breached: evalResult.isResponseBreached,
+        is_resolution_breached: evalResult.isResolutionBreached,
+        remaining_minutes: evalResult.remainingMinutes,
+      };
+    });
+
+    return NextResponse.json({ complaints: evaluatedComplaints });
   } catch (err) {
     console.error("[API/resident/complaints] Exception:", err);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
@@ -121,6 +140,15 @@ export async function POST(req: Request) {
       }
     }
 
+    // Resolve SLA rule and calculate response and resolution deadlines
+    const createdAt = new Date();
+    const slaConfig = await getSlaConfigForComplaint(
+      societyId,
+      parsed.data.category,
+      parsed.data.priority
+    );
+    const deadlineResult = calculateDeadlines(createdAt, slaConfig, parsed.data.priority);
+
     const { data: complaint, error: insertError } = await adminClient
       .from("complaints")
       .insert({
@@ -130,8 +158,13 @@ export async function POST(req: Request) {
         title: parsed.data.title,
         description: parsed.data.description,
         category: parsed.data.category,
+        subcategory: (parsed.data as any).subcategory || null,
         priority: parsed.data.priority,
         status: "SUBMITTED",
+        sla_status: "ON_TRACK",
+        sla_cycle_number: 1,
+        response_due_at: deadlineResult.responseDueAt.toISOString(),
+        resolution_due_at: deadlineResult.resolutionDueAt.toISOString(),
       })
       .select(`
         *,
@@ -154,6 +187,24 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Failed to create complaint" }, { status: 500 });
     }
 
+    // Record initial CREATED event in public.complaint_sla_events
+    await logComplaintTimelineEvent({
+      societyId,
+      complaintId: complaint.id,
+      cycleNumber: 1,
+      eventType: "CREATED",
+      toStatus: "SUBMITTED",
+      actorId: userId,
+      notes: "Ticket logged by resident",
+      metadata: {
+        category: complaint.category,
+        priority: complaint.priority,
+        response_due_at: deadlineResult.responseDueAt.toISOString(),
+        resolution_due_at: deadlineResult.resolutionDueAt.toISOString(),
+        business_hours_only: deadlineResult.businessHoursOnly,
+      },
+    });
+
     await recordAuditLog({
       actorUserId: identity.originalUser.id,
       effectiveUserId: userId,
@@ -166,6 +217,7 @@ export async function POST(req: Request) {
         category: complaint.category,
         priority: complaint.priority,
         unit_id: complaint.unit_id,
+        resolution_due_at: deadlineResult.resolutionDueAt.toISOString(),
       },
     });
 

@@ -14,8 +14,11 @@ import {
   Receipt,
 } from "lucide-react";
 
+import { useTranslation } from "@/lib/i18n/context";
+
 export function ResidentBottomNav() {
   const pathname = usePathname();
+  const { t } = useTranslation();
 
   const navItems = [
     { label: "Home", href: "/resident/dashboard", icon: Home },
@@ -24,6 +27,12 @@ export function ResidentBottomNav() {
     { label: "Notices", href: "/resident/notices", icon: Bell },
     { label: "Documents", href: "/resident/documents", icon: FileText },
     { label: "Profile", href: "/resident/profile", icon: User },
+    { label: t("nav.home"), href: "/resident/dashboard", icon: Home },
+    { label: t("nav.dues"), href: "/resident/dues", icon: Receipt },
+    { label: t("nav.gatePasses"), href: "/resident/visitors", icon: ShieldCheck },
+    { label: t("nav.notices"), href: "/resident/notices", icon: Bell },
+    { label: t("nav.documents"), href: "/resident/documents", icon: FileText },
+    { label: t("nav.profile"), href: "/resident/profile", icon: User },
   ];
 
   return (
