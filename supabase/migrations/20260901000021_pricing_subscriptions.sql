@@ -1,14 +1,19 @@
+-- ============================================================
 -- DwellSync Migration: Pricing, Free Tier & Subscription Architecture
--- Creates subscription_plans and society_subscriptions with RLS, constraints, and seed data.
--- LOCAL ONLY — do not execute against remote database.
+-- Version: 20260901000021_pricing_subscriptions.sql
+-- Description:
+--   1. Creates public.subscription_plans with pricing, limits, features, and zero-price FREE check.
+--   2. Creates public.society_subscriptions with status lifecycle, billing cycles, and tenant isolation.
+--   3. Seeds default tiers: FREE, BASIC, PROFESSIONAL, ENTERPRISE.
+--   4. Configures Row Level Security (RLS) with idempotent policy drops.
+-- ============================================================
 
--- ============================================================================
+-- ------------------------------------------------------------
 -- 1. SUBSCRIPTION PLANS TABLE
--- ============================================================================
-
+-- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.subscription_plans (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  code TEXT NOT NULL UNIQUE CHECK (code IN ('FREE', 'BASIC', 'PROFESSIONAL', 'ENTERPRISE')),
+  code TEXT NOT NULL,
   name TEXT NOT NULL,
   description TEXT,
   is_active BOOLEAN NOT NULL DEFAULT true,
@@ -19,24 +24,73 @@ CREATE TABLE IF NOT EXISTS public.subscription_plans (
   enabled_features TEXT[] NOT NULL DEFAULT '{}',
   sort_order INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  CONSTRAINT check_free_plan_zero_price CHECK (code != 'FREE' OR (monthly_price = 0 AND annual_price = 0))
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Idempotent column additions for safe re-runs
+ALTER TABLE public.subscription_plans
+  ADD COLUMN IF NOT EXISTS code TEXT,
+  ADD COLUMN IF NOT EXISTS name TEXT,
+  ADD COLUMN IF NOT EXISTS description TEXT,
+  ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS monthly_price NUMERIC(12, 2) NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS annual_price NUMERIC(12, 2) NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'INR',
+  ADD COLUMN IF NOT EXISTS feature_limits JSONB NOT NULL DEFAULT '{}'::jsonb,
+  ADD COLUMN IF NOT EXISTS enabled_features TEXT[] NOT NULL DEFAULT '{}',
+  ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+-- Unique constraint on code
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'uq_subscription_plans_code'
+      AND conrelid = 'public.subscription_plans'::regclass
+  ) THEN
+    ALTER TABLE public.subscription_plans ADD CONSTRAINT uq_subscription_plans_code UNIQUE (code);
+  END IF;
+EXCEPTION
+  WHEN OTHERS THEN NULL;
+END $$;
+
+-- CHECK constraint on plan codes
+DO $$
+BEGIN
+  ALTER TABLE public.subscription_plans DROP CONSTRAINT IF EXISTS subscription_plans_code_check;
+  ALTER TABLE public.subscription_plans ADD CONSTRAINT subscription_plans_code_check
+    CHECK (code IN ('FREE', 'BASIC', 'PROFESSIONAL', 'ENTERPRISE'));
+EXCEPTION
+  WHEN OTHERS THEN NULL;
+END $$;
+
+-- CHECK constraint: FREE plan must be ₹0
+DO $$
+BEGIN
+  ALTER TABLE public.subscription_plans DROP CONSTRAINT IF EXISTS check_free_plan_zero_price;
+  ALTER TABLE public.subscription_plans ADD CONSTRAINT check_free_plan_zero_price
+    CHECK (code != 'FREE' OR (monthly_price = 0 AND annual_price = 0));
+EXCEPTION
+  WHEN OTHERS THEN NULL;
+END $$;
+
+-- Indexes
 CREATE INDEX IF NOT EXISTS idx_subscription_plans_code ON public.subscription_plans(code);
 CREATE INDEX IF NOT EXISTS idx_subscription_plans_active ON public.subscription_plans(is_active);
 
 -- Enable RLS
 ALTER TABLE public.subscription_plans ENABLE ROW LEVEL SECURITY;
 
--- Everyone authenticated can read active subscription plans
+-- Read policy: Authenticated users can view active plans; Super Admins see all
 DROP POLICY IF EXISTS "Authenticated users can view active subscription plans" ON public.subscription_plans;
 CREATE POLICY "Authenticated users can view active subscription plans"
   ON public.subscription_plans FOR SELECT
   TO authenticated
   USING (is_active = true OR public.is_super_admin(auth.uid()));
 
--- Only Super Admins can manage plans
+-- Manage policy: Super Admins only
 DROP POLICY IF EXISTS "Super admins can manage subscription plans" ON public.subscription_plans;
 CREATE POLICY "Super admins can manage subscription plans"
   ON public.subscription_plans FOR ALL
@@ -44,16 +98,15 @@ CREATE POLICY "Super admins can manage subscription plans"
   USING (public.is_super_admin(auth.uid()))
   WITH CHECK (public.is_super_admin(auth.uid()));
 
--- ============================================================================
+-- ------------------------------------------------------------
 -- 2. SOCIETY SUBSCRIPTIONS TABLE
--- ============================================================================
-
+-- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.society_subscriptions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   society_id UUID NOT NULL REFERENCES public.societies(id) ON DELETE CASCADE,
   plan_id UUID NOT NULL REFERENCES public.subscription_plans(id) ON DELETE RESTRICT,
-  status TEXT NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('TRIAL', 'ACTIVE', 'PAST_DUE', 'CANCELLED', 'EXPIRED')),
-  billing_cycle TEXT NOT NULL DEFAULT 'monthly' CHECK (billing_cycle IN ('monthly', 'annual')),
+  status TEXT NOT NULL DEFAULT 'ACTIVE',
+  billing_cycle TEXT NOT NULL DEFAULT 'monthly',
   trial_start_date TIMESTAMPTZ,
   trial_end_date TIMESTAMPTZ,
   current_period_start TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -63,10 +116,61 @@ CREATE TABLE IF NOT EXISTS public.society_subscriptions (
   provider TEXT NOT NULL DEFAULT 'FREE_LOCAL_PROVIDER',
   metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  CONSTRAINT uq_society_subscription UNIQUE (society_id)
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Idempotent column additions for safe re-runs
+ALTER TABLE public.society_subscriptions
+  ADD COLUMN IF NOT EXISTS society_id UUID REFERENCES public.societies(id) ON DELETE CASCADE,
+  ADD COLUMN IF NOT EXISTS plan_id UUID REFERENCES public.subscription_plans(id) ON DELETE RESTRICT,
+  ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'ACTIVE',
+  ADD COLUMN IF NOT EXISTS billing_cycle TEXT NOT NULL DEFAULT 'monthly',
+  ADD COLUMN IF NOT EXISTS trial_start_date TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS trial_end_date TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS current_period_start TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  ADD COLUMN IF NOT EXISTS current_period_end TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '1 month'),
+  ADD COLUMN IF NOT EXISTS cancel_at_period_end BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS provider TEXT NOT NULL DEFAULT 'FREE_LOCAL_PROVIDER',
+  ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+-- Unique constraint on society_id
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'uq_society_subscription'
+      AND conrelid = 'public.society_subscriptions'::regclass
+  ) THEN
+    ALTER TABLE public.society_subscriptions ADD CONSTRAINT uq_society_subscription UNIQUE (society_id);
+  END IF;
+EXCEPTION
+  WHEN OTHERS THEN NULL;
+END $$;
+
+-- CHECK constraint on status
+DO $$
+BEGIN
+  ALTER TABLE public.society_subscriptions DROP CONSTRAINT IF EXISTS society_subscriptions_status_check;
+  ALTER TABLE public.society_subscriptions ADD CONSTRAINT society_subscriptions_status_check
+    CHECK (status IN ('TRIAL', 'ACTIVE', 'PAST_DUE', 'CANCELLED', 'EXPIRED'));
+EXCEPTION
+  WHEN OTHERS THEN NULL;
+END $$;
+
+-- CHECK constraint on billing cycle
+DO $$
+BEGIN
+  ALTER TABLE public.society_subscriptions DROP CONSTRAINT IF EXISTS society_subscriptions_billing_cycle_check;
+  ALTER TABLE public.society_subscriptions ADD CONSTRAINT society_subscriptions_billing_cycle_check
+    CHECK (billing_cycle IN ('monthly', 'annual'));
+EXCEPTION
+  WHEN OTHERS THEN NULL;
+END $$;
+
+-- Indexes
 CREATE INDEX IF NOT EXISTS idx_society_subscriptions_society ON public.society_subscriptions(society_id);
 CREATE INDEX IF NOT EXISTS idx_society_subscriptions_plan ON public.society_subscriptions(plan_id);
 CREATE INDEX IF NOT EXISTS idx_society_subscriptions_status ON public.society_subscriptions(status);
@@ -74,7 +178,7 @@ CREATE INDEX IF NOT EXISTS idx_society_subscriptions_status ON public.society_su
 -- Enable RLS
 ALTER TABLE public.society_subscriptions ENABLE ROW LEVEL SECURITY;
 
--- Society members can view their society subscription, and Super Admins can view all
+-- Read policy: Society members and Super Admins
 DROP POLICY IF EXISTS "Society members and super admins can view society subscriptions" ON public.society_subscriptions;
 CREATE POLICY "Society members and super admins can view society subscriptions"
   ON public.society_subscriptions FOR SELECT
@@ -89,7 +193,7 @@ CREATE POLICY "Society members and super admins can view society subscriptions"
     )
   );
 
--- Only Super Admins can manage society subscriptions
+-- Manage policy: Super Admins only
 DROP POLICY IF EXISTS "Super admins can manage society subscriptions" ON public.society_subscriptions;
 CREATE POLICY "Super admins can manage society subscriptions"
   ON public.society_subscriptions FOR ALL
@@ -97,10 +201,9 @@ CREATE POLICY "Super admins can manage society subscriptions"
   USING (public.is_super_admin(auth.uid()))
   WITH CHECK (public.is_super_admin(auth.uid()));
 
--- ============================================================================
+-- ------------------------------------------------------------
 -- 3. SEED DEFAULT SUBSCRIPTION PLANS
--- ============================================================================
-
+-- ------------------------------------------------------------
 INSERT INTO public.subscription_plans (
   code,
   name,
@@ -274,4 +377,3 @@ ON CONFLICT (code) DO UPDATE SET
   enabled_features = EXCLUDED.enabled_features,
   sort_order = EXCLUDED.sort_order,
   updated_at = NOW();
-
