@@ -192,3 +192,90 @@ export const UpdateActionItemSchema = z.object({
   status: ActionItemStatusEnum.optional(),
 });
 
+// ==========================================
+// PHASE 11: SOCIETY SETTINGS & RESOLUTIONS
+// ==========================================
+
+export const EmergencyContactSchema = z.object({
+  name: z.string().trim().min(2, "Name required").max(100),
+  role: z.string().trim().min(2, "Role required").max(100),
+  phone: z.string().trim().min(7, "Valid phone required").max(20),
+});
+
+export const SocietySettingsSchema = z.object({
+  financial_year_start_month: z.coerce.number().int().min(1).max(12).default(4),
+  agm_due_month: z.coerce.number().int().min(1).max(12).default(9),
+  quorum_percentage: z.coerce.number().min(1).max(100).default(30),
+  default_meeting_duration_minutes: z.coerce.number().int().positive().default(60),
+  require_visitor_preapproval: z.boolean().default(false),
+  auto_escalate_complaints: z.boolean().default(true),
+  rules_and_by_laws: z.string().max(20000).optional().nullable(),
+  emergency_contacts: z.array(EmergencyContactSchema).default([]),
+});
+
+export const ResolutionTypeEnum = z.enum([
+  "ORDINARY",
+  "SPECIAL",
+  "CIRCULAR",
+  "EMERGENCY",
+]);
+
+export const ResolutionStatusEnum = z.enum([
+  "PROPOSED",
+  "PASSED",
+  "REJECTED",
+  "DEFERRED",
+]);
+
+export const CreateResolutionSchema = z.object({
+  meeting_id: z.string().uuid("Invalid meeting UUID").optional().nullable(),
+  resolution_number: z.string().trim().min(1, "Resolution number required").max(50).optional(),
+  title: z.string().trim().min(3, "Title must be at least 3 characters").max(255),
+  description: z.string().trim().min(10, "Description must be at least 10 characters").max(10000),
+  resolution_type: ResolutionTypeEnum.default("ORDINARY"),
+  status: ResolutionStatusEnum.default("PASSED"),
+  proposed_by: z.string().uuid("Invalid proposer UUID").optional().nullable(),
+  seconded_by: z.string().uuid("Invalid seconder UUID").optional().nullable(),
+  votes_for: z.coerce.number().int().min(0).default(0),
+  votes_against: z.coerce.number().int().min(0).default(0),
+  votes_abstained: z.coerce.number().int().min(0).default(0),
+  passed_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format must be YYYY-MM-DD").optional(),
+  effective_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format must be YYYY-MM-DD").optional(),
+  notes: z.string().max(2000).optional().nullable(),
+});
+
+export const UpdateResolutionSchema = z.object({
+  title: z.string().trim().min(3).max(255).optional(),
+  description: z.string().trim().min(10).max(10000).optional(),
+  resolution_type: ResolutionTypeEnum.optional(),
+  status: ResolutionStatusEnum.optional(),
+  proposed_by: z.string().uuid().optional().nullable(),
+  seconded_by: z.string().uuid().optional().nullable(),
+  votes_for: z.coerce.number().int().min(0).optional(),
+  votes_against: z.coerce.number().int().min(0).optional(),
+  votes_abstained: z.coerce.number().int().min(0).optional(),
+  passed_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  effective_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  notes: z.string().max(2000).optional().nullable(),
+});
+
+export const UpdateMemberRoleSchema = z.object({
+  role_id: z.enum([
+    "SOCIETY_ADMIN",
+    "SECRETARY",
+    "TREASURER",
+    "COMMITTEE_MEMBER",
+    "MANAGER",
+    "RESIDENT",
+    "OWNER",
+    "TENANT",
+    "SECURITY",
+    "STAFF",
+    "VENDOR",
+    "AUDITOR",
+  ]),
+  unit_number: z.string().max(50).optional().nullable(),
+  status: z.enum(["ACTIVE", "SUSPENDED", "TERMINATED", "INVITED"]).optional(),
+});
+
+

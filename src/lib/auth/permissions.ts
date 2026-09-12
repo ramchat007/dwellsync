@@ -1,4 +1,6 @@
 import { RoleId } from "../types/database";
+import { CompanyRole, COMPANY_ROLE_PERMISSIONS } from "../types/company";
+
 
 export const PERMISSIONS = {
   // Platform permissions
@@ -111,6 +113,17 @@ export const PERMISSIONS = {
   INVENTORY_MANAGE: "inventory.manage",
   INVENTORY_ISSUE: "inventory.issue",
   INVENTORY_ADJUST: "inventory.adjust",
+
+  // Phase 15 Property Management Company permissions
+  COMPANY_VIEW: "company.view",
+  COMPANY_MANAGE: "company.manage",
+  COMPANY_SOCIETIES_VIEW: "company.societies.view",
+  COMPANY_SOCIETIES_MANAGE: "company.societies.manage",
+  COMPANY_MEMBERS_VIEW: "company.members.view",
+  COMPANY_MEMBERS_MANAGE: "company.members.manage",
+  COMPANY_STAFF_VIEW: "company.staff.view",
+  COMPANY_STAFF_MANAGE: "company.staff.manage",
+  COMPANY_ANALYTICS_VIEW: "company.analytics.view",
 } as const;
 
 export type PermissionKey = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -500,3 +513,15 @@ export function roleHasPermission(role: RoleId | null | undefined, permission: s
   const permissions = getPermissionsForRole(role);
   return permissions.includes(permission);
 }
+
+export function getPermissionsForCompanyRole(role: CompanyRole | null | undefined): string[] {
+  if (!role) return [];
+  return COMPANY_ROLE_PERMISSIONS[role] || [];
+}
+
+export function companyRoleHasPermission(role: CompanyRole | null | undefined, permission: string): boolean {
+  if (!role) return false;
+  const permissions = getPermissionsForCompanyRole(role);
+  return permissions.includes(permission);
+}
+

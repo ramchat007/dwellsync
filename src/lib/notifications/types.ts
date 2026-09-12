@@ -30,6 +30,8 @@ export type NotificationType =
   | "INVOICE_GENERATED"
   | "PAYMENT_RECORDED"
   | "RECEIPT_GENERATED"
+  | "PAYMENT_OVERDUE"
+  | "BILLING_CYCLE_STARTED"
   // Circulars & Notices
   | "NOTICE_PUBLISHED"
   | "IMPORTANT_NOTICE_PUBLISHED"
@@ -52,6 +54,12 @@ export type NotificationType =
   | "COMMITTEE_MEMBER_REMOVED"
   | "COMMITTEE_MEMBER_RESIGNED"
   | "COMMITTEE_DESIGNATION_CHANGED"
+  // System & Access Alerts
+  | "SYSTEM_ALERT"
+  | "ACCOUNT_SECURITY_ALERT"
+  | "ACCESS_REQUEST_SUBMITTED"
+  | "ACCESS_REQUEST_APPROVED"
+  | "ACCESS_REQUEST_REJECTED"
   // General & Broadcast
   | "SOCIETY_BROADCAST"
   | "GENERAL_ANNOUNCEMENT"
@@ -87,6 +95,7 @@ export interface SendNotificationParams {
   actionUrl?: string | null;
   dedupKey?: string | null;
   forceInApp?: boolean; // For security-critical alerts
+  cooldownSeconds?: number; // Spam prevention cooldown window in seconds
 }
 
 export interface SendNotificationResult {

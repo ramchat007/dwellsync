@@ -1,5 +1,6 @@
 -- ============================================================
 -- DwellSync Migration 19: Complaints / Helpdesk Enhancement + SLA Management
+-- Fully Idempotent, Non-Destructive, Safely Rerunnable
 -- ============================================================
 
 -- 1. ENHANCE PUBLIC.COMPLAINTS TABLE
@@ -74,6 +75,24 @@ CREATE TABLE IF NOT EXISTS public.complaint_sla_configs (
   CONSTRAINT uq_complaint_sla_configs UNIQUE (society_id, category, priority, effective_from)
 );
 
+-- Idempotently ensure columns and constraints on complaint_sla_configs
+DO $$
+BEGIN
+  ALTER TABLE public.complaint_sla_configs ADD COLUMN IF NOT EXISTS business_hours_start TIME DEFAULT '09:00:00';
+  ALTER TABLE public.complaint_sla_configs ADD COLUMN IF NOT EXISTS business_hours_end TIME DEFAULT '18:00:00';
+  ALTER TABLE public.complaint_sla_configs ADD COLUMN IF NOT EXISTS exclude_weekends BOOLEAN DEFAULT TRUE;
+  ALTER TABLE public.complaint_sla_configs ADD COLUMN IF NOT EXISTS effective_from DATE DEFAULT CURRENT_DATE;
+  ALTER TABLE public.complaint_sla_configs ADD COLUMN IF NOT EXISTS effective_to DATE;
+  ALTER TABLE public.complaint_sla_configs ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;
+  ALTER TABLE public.complaint_sla_configs ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL;
+  ALTER TABLE public.complaint_sla_configs ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uq_complaint_sla_configs') THEN
+    ALTER TABLE public.complaint_sla_configs
+      ADD CONSTRAINT uq_complaint_sla_configs UNIQUE (society_id, category, priority, effective_from);
+  END IF;
+END $$;
+
 CREATE INDEX IF NOT EXISTS idx_sla_configs_society_active ON public.complaint_sla_configs(society_id, is_active);
 
 -- ============================================================
@@ -109,6 +128,17 @@ CREATE TABLE IF NOT EXISTS public.complaint_sla_events (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Idempotently ensure columns on complaint_sla_events
+DO $$
+BEGIN
+  ALTER TABLE public.complaint_sla_events ADD COLUMN IF NOT EXISTS cycle_number INTEGER DEFAULT 1;
+  ALTER TABLE public.complaint_sla_events ADD COLUMN IF NOT EXISTS from_status TEXT;
+  ALTER TABLE public.complaint_sla_events ADD COLUMN IF NOT EXISTS to_status TEXT;
+  ALTER TABLE public.complaint_sla_events ADD COLUMN IF NOT EXISTS actor_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL;
+  ALTER TABLE public.complaint_sla_events ADD COLUMN IF NOT EXISTS notes TEXT;
+  ALTER TABLE public.complaint_sla_events ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}'::jsonb;
+END $$;
+
 CREATE INDEX IF NOT EXISTS idx_sla_events_complaint ON public.complaint_sla_events(complaint_id, cycle_number, created_at);
 CREATE INDEX IF NOT EXISTS idx_sla_events_society ON public.complaint_sla_events(society_id, created_at);
 
@@ -129,6 +159,19 @@ CREATE TABLE IF NOT EXISTS public.complaint_escalation_rules (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   CONSTRAINT uq_escalation_rules_society_level UNIQUE (society_id, level, trigger_condition)
 );
+
+-- Idempotently ensure columns and constraints on complaint_escalation_rules
+DO $$
+BEGIN
+  ALTER TABLE public.complaint_escalation_rules ADD COLUMN IF NOT EXISTS notify_roles TEXT[] DEFAULT ARRAY['MANAGER', 'SOCIETY_ADMIN'];
+  ALTER TABLE public.complaint_escalation_rules ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;
+  ALTER TABLE public.complaint_escalation_rules ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uq_escalation_rules_society_level') THEN
+    ALTER TABLE public.complaint_escalation_rules
+      ADD CONSTRAINT uq_escalation_rules_society_level UNIQUE (society_id, level, trigger_condition);
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_escalation_rules_society ON public.complaint_escalation_rules(society_id, is_active);
 
@@ -151,6 +194,11 @@ CREATE POLICY "Members can view society SLA configs"
         AND sm.user_id = auth.uid()
         AND sm.status = 'ACTIVE'
     )
+    OR EXISTS (
+      SELECT 1 FROM public.platform_admins pa
+      WHERE pa.user_id = auth.uid()
+        AND pa.role_id = 'SUPER_ADMIN'
+    )
   );
 
 DROP POLICY IF EXISTS "Admins can manage society SLA configs" ON public.complaint_sla_configs;
@@ -163,6 +211,11 @@ CREATE POLICY "Admins can manage society SLA configs"
         AND sm.user_id = auth.uid()
         AND sm.status = 'ACTIVE'
         AND sm.role_id IN ('SUPER_ADMIN', 'SOCIETY_ADMIN', 'SECRETARY', 'MANAGER')
+    )
+    OR EXISTS (
+      SELECT 1 FROM public.platform_admins pa
+      WHERE pa.user_id = auth.uid()
+        AND pa.role_id = 'SUPER_ADMIN'
     )
   );
 
@@ -186,6 +239,11 @@ CREATE POLICY "Residents view timeline of own complaints or staff view all"
       WHERE c.id = complaint_sla_events.complaint_id
         AND c.created_by = auth.uid()
     )
+    OR EXISTS (
+      SELECT 1 FROM public.platform_admins pa
+      WHERE pa.user_id = auth.uid()
+        AND pa.role_id = 'SUPER_ADMIN'
+    )
   );
 
 DROP POLICY IF EXISTS "Staff and admins can insert SLA timeline events" ON public.complaint_sla_events;
@@ -197,6 +255,11 @@ CREATE POLICY "Staff and admins can insert SLA timeline events"
       WHERE sm.society_id = complaint_sla_events.society_id
         AND sm.user_id = auth.uid()
         AND sm.status = 'ACTIVE'
+    )
+    OR EXISTS (
+      SELECT 1 FROM public.platform_admins pa
+      WHERE pa.user_id = auth.uid()
+        AND pa.role_id = 'SUPER_ADMIN'
     )
   );
 
@@ -212,6 +275,11 @@ CREATE POLICY "Staff and admins view escalation rules"
         AND sm.status = 'ACTIVE'
         AND sm.role_id IN ('SUPER_ADMIN', 'SOCIETY_ADMIN', 'SECRETARY', 'MANAGER', 'COMMITTEE_MEMBER')
     )
+    OR EXISTS (
+      SELECT 1 FROM public.platform_admins pa
+      WHERE pa.user_id = auth.uid()
+        AND pa.role_id = 'SUPER_ADMIN'
+    )
   );
 
 DROP POLICY IF EXISTS "Admins can manage escalation rules" ON public.complaint_escalation_rules;
@@ -225,5 +293,9 @@ CREATE POLICY "Admins can manage escalation rules"
         AND sm.status = 'ACTIVE'
         AND sm.role_id IN ('SUPER_ADMIN', 'SOCIETY_ADMIN', 'SECRETARY', 'MANAGER')
     )
+    OR EXISTS (
+      SELECT 1 FROM public.platform_admins pa
+      WHERE pa.user_id = auth.uid()
+        AND pa.role_id = 'SUPER_ADMIN'
+    )
   );
-

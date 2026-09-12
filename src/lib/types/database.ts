@@ -160,7 +160,30 @@ export type AuditAction =
   | "COMMITTEE_MEMBER_APPOINTED"
   | "COMMITTEE_MEMBER_UPDATED"
   | "COMMITTEE_MEMBER_RESIGNED"
-  | "COMMITTEE_MEMBER_REMOVED";
+  | "COMMITTEE_MEMBER_REMOVED"
+  | "DATA_IMPORT_INITIATED"
+  | "DATA_IMPORT_VALIDATED"
+  | "DATA_IMPORT_COMPLETED"
+  | "DATA_IMPORT_FAILED"
+  | "SOCIETY_SETTINGS_UPDATED"
+  | "RESOLUTION_CREATED"
+  | "RESOLUTION_UPDATED"
+  | "RESOLUTION_DELETED"
+  | "ACCESS_REQUEST_APPROVED"
+  | "ACCESS_REQUEST_REJECTED"
+  | "COMPANY_CREATED"
+  | "COMPANY_UPDATED"
+  | "COMPANY_SOCIETY_ASSIGNED"
+  | "COMPANY_SOCIETY_REMOVED"
+  | "COMPANY_MEMBER_ADDED"
+  | "COMPANY_MEMBER_UPDATED"
+  | "COMPANY_MEMBER_SUSPENDED"
+  | "COMPANY_MEMBER_REMOVED"
+  | "COMPANY_SOCIETY_ACCESS_GRANTED"
+  | "COMPANY_SOCIETY_ACCESS_SUSPENDED"
+  | "COMPANY_SOCIETY_ACCESS_REVOKED"
+  | "COMPANY_STAFF_ASSIGNED"
+  | "COMPANY_STAFF_UNASSIGNED";
 
 export interface Profile {
   id: string;
@@ -1266,6 +1289,54 @@ export interface MeetingActionItem {
   created_at: string;
   updated_at: string;
   assignee?: Profile | null;
+}
+
+export interface EmergencyContact {
+  name: string;
+  role: string;
+  phone: string;
+}
+
+export interface SocietySettings {
+  society_id: string;
+  financial_year_start_month: number;
+  agm_due_month: number;
+  quorum_percentage: number;
+  default_meeting_duration_minutes: number;
+  require_visitor_preapproval: boolean;
+  auto_escalate_complaints: boolean;
+  rules_and_by_laws?: string | null;
+  emergency_contacts: EmergencyContact[];
+  created_at: string;
+  updated_at: string;
+}
+
+export type ResolutionType = "ORDINARY" | "SPECIAL" | "CIRCULAR" | "EMERGENCY";
+export type ResolutionStatus = "PROPOSED" | "PASSED" | "REJECTED" | "DEFERRED";
+
+export interface GovernanceResolution {
+  id: string;
+  society_id: string;
+  meeting_id?: string | null;
+  resolution_number: string;
+  title: string;
+  description: string;
+  resolution_type: ResolutionType;
+  status: ResolutionStatus;
+  proposed_by?: string | null;
+  seconded_by?: string | null;
+  votes_for: number;
+  votes_against: number;
+  votes_abstained: number;
+  passed_date: string;
+  effective_date: string;
+  notes?: string | null;
+  created_by?: string | null;
+  created_at: string;
+  updated_at: string;
+  meeting?: SocietyMeeting | null;
+  proposer?: Profile | null;
+  seconder?: Profile | null;
 }
 
 // ==========================================

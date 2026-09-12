@@ -234,21 +234,29 @@ export function NotificationBell() {
           </div>
 
           {/* Footer */}
-          <div className="px-4 py-2 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 flex items-center justify-between text-xs">
+          <div className="px-4 py-2.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/70 flex items-center justify-between text-xs">
             <Link
-              href="/resident/settings/notifications"
+              href="/resident/notifications"
               onClick={() => setIsOpen(false)}
-              className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-[11px]"
+              className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium text-[11px]"
             >
-              Preferences
+              View All Inbox
             </Link>
-            <button
-              onClick={() => setIsOpen(false)}
-              className="text-slate-500 hover:text-slate-700 dark:text-slate-400 text-[11px]"
-            >
-              Close
-              {t("common.close")}
-            </button>
+            <div className="flex items-center space-x-3">
+              <Link
+                href="/resident/settings/notifications"
+                onClick={() => setIsOpen(false)}
+                className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-[11px]"
+              >
+                Preferences
+              </Link>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="text-slate-500 hover:text-slate-700 dark:text-slate-400 text-[11px]"
+              >
+                {t("common.close") || "Close"}
+              </button>
+            </div>
           </div>
         </div>
       )}

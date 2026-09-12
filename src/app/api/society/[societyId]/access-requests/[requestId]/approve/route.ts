@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireSocietyAccess } from "@/lib/auth/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { recordAuditLog } from "@/lib/auth/audit";
+import { sendDomainNotification } from "@/lib/services/notificationService";
 
 export const dynamic = "force-dynamic";
 
@@ -137,7 +138,7 @@ export async function POST(
     await recordAuditLog({
       actorUserId: identity.effectiveUser.id,
       societyId,
-      action: "MEMBERSHIP_CREATED" as any,
+      action: "ACCESS_REQUEST_APPROVED" as any,
       resourceType: "society_access_requests",
       resourceId: requestId,
       metadata: {
@@ -146,6 +147,24 @@ export async function POST(
         assignedRole,
       },
     });
+
+    // 7. Notification Dispatch
+    if (request.user_id) {
+      try {
+        await sendDomainNotification({
+          societyId,
+          type: "ACCESS_REQUEST_APPROVED",
+          recipientIds: [request.user_id],
+          data: {
+            societyName: identity.currentSociety?.name || "Society",
+            unitNumber: request.unit_number,
+            role: assignedRole,
+          },
+        });
+      } catch (notifErr) {
+        console.warn("[access-requests approve] Notification dispatch warning:", notifErr);
+      }
+    }
 
     return NextResponse.json({
       success: true,

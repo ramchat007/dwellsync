@@ -34,6 +34,8 @@ import {
   Boxes,
   Package,
   CreditCard,
+  FileSpreadsheet,
+  FileCheck2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useTranslation } from "@/lib/i18n/context";
@@ -65,6 +67,8 @@ const ICON_MAP: Record<string, React.ElementType> = {
   Boxes,
   Package,
   CreditCard,
+  FileSpreadsheet,
+  FileCheck2,
 };
 
 export function Sidebar({ className }: { className?: string }) {

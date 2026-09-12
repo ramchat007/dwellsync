@@ -1,12 +1,13 @@
 -- ============================================================
 -- DwellSync Migration 20: Language & Localization Foundation
+-- Fully Idempotent, Non-Destructive, Safely Rerunnable
 -- ============================================================
 
 -- 1. Add preferred_language to public.profiles
 ALTER TABLE public.profiles
   ADD COLUMN IF NOT EXISTS preferred_language TEXT NOT NULL DEFAULT 'en';
 
--- Ensure check constraint allows supported locales
+-- 2. Guarded check constraint ensuring supported locales (en, mr, hi)
 DO $$
 BEGIN
   ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_preferred_language_check;
@@ -15,7 +16,6 @@ BEGIN
   );
 END $$;
 
--- Index for localized query performance
+-- 3. Idempotent index for localized query performance
 CREATE INDEX IF NOT EXISTS idx_profiles_preferred_language
   ON public.profiles(preferred_language);
-

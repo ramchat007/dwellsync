@@ -10,12 +10,7 @@ import {
 } from '../notifications/types';
 import { renderNotificationTemplate } from '../notifications/templates';
 import { Locale } from '../i18n/types';
-import {
-  inAppProvider,
-  simulatedEmailProvider,
-  simulatedSmsProvider,
-  simulatedWhatsAppProvider,
-} from '../notifications/providers';
+import { notificationProviderRegistry } from '../notifications/providers';
 
 // Re-export domain types for backward compatibility
 export type { NotificationCategory, NotificationType, NotificationChannel, NotificationDeliveryStatus };
@@ -91,7 +86,7 @@ export async function sendDomainNotification(
   params: SendNotificationParams
 ): Promise<SendNotificationResult> {
   const adminClient = createAdminClient();
-  const { societyId, type, data, actorId, dedupKey, forceInApp } = params;
+  const { societyId, type, data, actorId, dedupKey, forceInApp, cooldownSeconds } = params;
 
   try {
     // 1. Resolve recipients
@@ -135,22 +130,55 @@ export async function sendDomainNotification(
     const channelsAttemptedSet = new Set<NotificationChannel>();
     let skippedCount = 0;
 
-    // 3. Process each recipient with tenant isolation and preferences check
     // 3. Process each recipient with tenant isolation, localized template, and preferences check
     for (const recipientId of recipientIds) {
-      // Check deduplication key if specified
-      if (dedupKey) {
+      // A. Check explicit dedupKey or auto-derive deterministic key from entity attributes
+      const entityId =
+        data && typeof data === 'object'
+          ? (data as any).ticketNumber ||
+            (data as any).complaintId ||
+            (data as any).invoiceNumber ||
+            (data as any).visitorId ||
+            (data as any).eventId ||
+            (data as any).pollId ||
+            (data as any).noticeId ||
+            (data as any).requestId
+          : null;
+
+      const effectiveDedupKey =
+        dedupKey || (entityId ? `${societyId}:${recipientId}:${type}:${entityId}` : null);
+
+      if (effectiveDedupKey) {
         const { data: existing } = await adminClient
           .from('notifications')
           .select('id')
           .eq('society_id', societyId)
           .eq('recipient_id', recipientId)
-          .eq('dedup_key', dedupKey)
+          .eq('dedup_key', effectiveDedupKey)
           .maybeSingle();
 
         if (existing) {
           // Idempotent hit: skip duplicate dispatch
           createdNotificationIds.push(existing.id);
+          continue;
+        }
+      }
+
+      // B. Check spam cooldown window if configured
+      if (cooldownSeconds && cooldownSeconds > 0) {
+        const cutoff = new Date(Date.now() - cooldownSeconds * 1000).toISOString();
+        const { data: recent } = await adminClient
+          .from('notifications')
+          .select('id')
+          .eq('society_id', societyId)
+          .eq('recipient_id', recipientId)
+          .eq('type', type)
+          .gte('created_at', cutoff)
+          .limit(1)
+          .maybeSingle();
+
+        if (recent) {
+          // Cooldown suppression: skip duplicate rapid dispatch
           continue;
         }
       }
@@ -203,7 +231,7 @@ export async function sendDomainNotification(
             title,
             body,
             action_url: actionUrl,
-            dedup_key: dedupKey || null,
+            dedup_key: effectiveDedupKey || null,
             metadata: data || {},
           })
           .select('id')
@@ -215,8 +243,9 @@ export async function sendDomainNotification(
             createdNotificationIds.push(notificationId);
           }
 
-          // Dispatch to inApp provider
-          await inAppProvider.send({
+          // Dispatch to inApp provider via registry
+          const inAppProv = notificationProviderRegistry.get('IN_APP');
+          await inAppProv.send({
             notificationId: notifRecord.id,
             recipientId,
             channel: 'IN_APP',
@@ -230,7 +259,7 @@ export async function sendDomainNotification(
           await adminClient.from('notification_deliveries').insert({
             notification_id: notifRecord.id,
             channel: 'IN_APP',
-            provider: inAppProvider.providerName,
+            provider: inAppProv.providerName,
             status: 'DELIVERED',
             provider_message_id: notifRecord.id,
           });
@@ -272,7 +301,8 @@ export async function sendDomainNotification(
         // Dispatch Email if enabled
         if (emailEnabled) {
           channelsAttemptedSet.add('EMAIL');
-          const emailRes = await simulatedEmailProvider.send({
+          const emailProv = notificationProviderRegistry.get('EMAIL');
+          const emailRes = await emailProv.send({
             notificationId,
             recipientId,
             recipientEmail: userEmail,
@@ -296,7 +326,8 @@ export async function sendDomainNotification(
         // Dispatch SMS if enabled
         if (smsEnabled) {
           channelsAttemptedSet.add('SMS');
-          const smsRes = await simulatedSmsProvider.send({
+          const smsProv = notificationProviderRegistry.get('SMS');
+          const smsRes = await smsProv.send({
             notificationId,
             recipientId,
             recipientPhone: userPhone,
@@ -320,7 +351,8 @@ export async function sendDomainNotification(
         // Dispatch WhatsApp if enabled
         if (waEnabled) {
           channelsAttemptedSet.add('WHATSAPP');
-          const waRes = await simulatedWhatsAppProvider.send({
+          const waProv = notificationProviderRegistry.get('WHATSAPP');
+          const waRes = await waProv.send({
             notificationId,
             recipientId,
             recipientPhone: userPhone,

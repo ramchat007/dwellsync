@@ -187,6 +187,7 @@ export function getNavigationForRole(
       { label: "Analytics & Reports", href: `/society/${sid}/analytics`, iconName: "BarChart3" },
       { label: "Committees", href: `/society/${sid}/committees`, iconName: "Shield" },
       { label: "Meetings & Proceedings", href: `/society/${sid}/meetings`, iconName: "Calendar" },
+      { label: "Resolutions", href: `/society/${sid}/resolutions`, iconName: "FileCheck2" },
       { label: "Buildings & Wings", href: `/society/${sid}/buildings`, iconName: "Building2" },
       { label: "Units & Flats", href: `/society/${sid}/units`, iconName: "DoorOpen" },
       { label: "People Directory", href: `/society/${sid}/people`, iconName: "Users" },
@@ -200,8 +201,9 @@ export function getNavigationForRole(
       { label: "Documents", href: `/society/${sid}/documents`, iconName: "FileText" },
       { label: "Handover", href: `/society/${sid}/handover`, iconName: "ClipboardList" },
       { label: "Assets & Inventory", href: `/society/${sid}/assets`, iconName: "Boxes" },
+      { label: "Data Migration", href: `/society/${sid}/import`, iconName: "FileSpreadsheet" },
       { label: "Subscription & Limits", href: `/society/${sid}/subscription`, iconName: "CreditCard" },
-      { label: "Society Settings", href: `/society/${sid}/society`, iconName: "Settings" },
+      { label: "Society Settings", href: `/society/${sid}/settings`, iconName: "Settings" },
     ];
   }
 
@@ -212,6 +214,7 @@ export function getNavigationForRole(
       { label: "Analytics & Reports", href: `/society/${sid}/analytics`, iconName: "BarChart3" },
       { label: "Committees", href: `/society/${sid}/committees`, iconName: "Shield" },
       { label: "Meetings & Proceedings", href: `/society/${sid}/meetings`, iconName: "Calendar" },
+      { label: "Resolutions", href: `/society/${sid}/resolutions`, iconName: "FileCheck2" },
       { label: "Treasury & Finance", href: `/society/${sid}/finance`, iconName: "Banknote" },
       { label: "Buildings & Layout", href: `/society/${sid}/buildings`, iconName: "Building2" },
       { label: "Units Directory", href: `/society/${sid}/units`, iconName: "DoorOpen" },
@@ -223,6 +226,7 @@ export function getNavigationForRole(
       { label: "Documents", href: `/society/${sid}/documents`, iconName: "FileText" },
       { label: "Handover", href: `/society/${sid}/handover`, iconName: "ClipboardList" },
       { label: "Assets & Inventory", href: `/society/${sid}/assets`, iconName: "Boxes" },
+      { label: "Data Migration", href: `/society/${sid}/import`, iconName: "FileSpreadsheet" },
       { label: "Society Profile", href: `/society/${sid}/society`, iconName: "Settings" },
     ];
   }
@@ -238,6 +242,7 @@ export function getNavigationForRole(
       { label: "Member Directory", href: `/society/${sid}/people`, iconName: "Users" },
       { label: "Documents", href: `/society/${sid}/documents`, iconName: "FileText" },
       { label: "Assets & Inventory", href: `/society/${sid}/assets`, iconName: "Boxes" },
+      { label: "Data Migration", href: `/society/${sid}/import`, iconName: "FileSpreadsheet" },
       { label: "Society Profile", href: `/society/${sid}/society`, iconName: "Settings" },
     ];
   }

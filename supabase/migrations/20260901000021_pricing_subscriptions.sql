@@ -1,5 +1,7 @@
 -- ============================================================
 -- DwellSync Migration: Pricing, Free Tier & Subscription Architecture
+-- Creates subscription_plans and society_subscriptions with RLS, constraints, and seed data.
+-- LOCAL ONLY — do not execute against remote database.
 -- Version: 20260901000021_pricing_subscriptions.sql
 -- Description:
 --   1. Creates public.subscription_plans with pricing, limits, features, and zero-price FREE check.
@@ -8,11 +10,15 @@
 --   4. Configures Row Level Security (RLS) with idempotent policy drops.
 -- ============================================================
 
+-- ============================================================================
 -- ------------------------------------------------------------
 -- 1. SUBSCRIPTION PLANS TABLE
+-- ============================================================================
+
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.subscription_plans (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  code TEXT NOT NULL UNIQUE CHECK (code IN ('FREE', 'BASIC', 'PROFESSIONAL', 'ENTERPRISE')),
   code TEXT NOT NULL,
   name TEXT NOT NULL,
   description TEXT,
@@ -24,6 +30,8 @@ CREATE TABLE IF NOT EXISTS public.subscription_plans (
   enabled_features TEXT[] NOT NULL DEFAULT '{}',
   sort_order INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT check_free_plan_zero_price CHECK (code != 'FREE' OR (monthly_price = 0 AND annual_price = 0))
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -83,6 +91,7 @@ CREATE INDEX IF NOT EXISTS idx_subscription_plans_active ON public.subscription_
 -- Enable RLS
 ALTER TABLE public.subscription_plans ENABLE ROW LEVEL SECURITY;
 
+-- Everyone authenticated can read active subscription plans
 -- Read policy: Authenticated users can view active plans; Super Admins see all
 DROP POLICY IF EXISTS "Authenticated users can view active subscription plans" ON public.subscription_plans;
 CREATE POLICY "Authenticated users can view active subscription plans"
@@ -90,6 +99,7 @@ CREATE POLICY "Authenticated users can view active subscription plans"
   TO authenticated
   USING (is_active = true OR public.is_super_admin(auth.uid()));
 
+-- Only Super Admins can manage plans
 -- Manage policy: Super Admins only
 DROP POLICY IF EXISTS "Super admins can manage subscription plans" ON public.subscription_plans;
 CREATE POLICY "Super admins can manage subscription plans"
@@ -98,13 +108,18 @@ CREATE POLICY "Super admins can manage subscription plans"
   USING (public.is_super_admin(auth.uid()))
   WITH CHECK (public.is_super_admin(auth.uid()));
 
+-- ============================================================================
 -- ------------------------------------------------------------
 -- 2. SOCIETY SUBSCRIPTIONS TABLE
+-- ============================================================================
+
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.society_subscriptions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   society_id UUID NOT NULL REFERENCES public.societies(id) ON DELETE CASCADE,
   plan_id UUID NOT NULL REFERENCES public.subscription_plans(id) ON DELETE RESTRICT,
+  status TEXT NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('TRIAL', 'ACTIVE', 'PAST_DUE', 'CANCELLED', 'EXPIRED')),
+  billing_cycle TEXT NOT NULL DEFAULT 'monthly' CHECK (billing_cycle IN ('monthly', 'annual')),
   status TEXT NOT NULL DEFAULT 'ACTIVE',
   billing_cycle TEXT NOT NULL DEFAULT 'monthly',
   trial_start_date TIMESTAMPTZ,
@@ -116,6 +131,8 @@ CREATE TABLE IF NOT EXISTS public.society_subscriptions (
   provider TEXT NOT NULL DEFAULT 'FREE_LOCAL_PROVIDER',
   metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT uq_society_subscription UNIQUE (society_id)
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -178,6 +195,7 @@ CREATE INDEX IF NOT EXISTS idx_society_subscriptions_status ON public.society_su
 -- Enable RLS
 ALTER TABLE public.society_subscriptions ENABLE ROW LEVEL SECURITY;
 
+-- Society members can view their society subscription, and Super Admins can view all
 -- Read policy: Society members and Super Admins
 DROP POLICY IF EXISTS "Society members and super admins can view society subscriptions" ON public.society_subscriptions;
 CREATE POLICY "Society members and super admins can view society subscriptions"
@@ -193,6 +211,7 @@ CREATE POLICY "Society members and super admins can view society subscriptions"
     )
   );
 
+-- Only Super Admins can manage society subscriptions
 -- Manage policy: Super Admins only
 DROP POLICY IF EXISTS "Super admins can manage society subscriptions" ON public.society_subscriptions;
 CREATE POLICY "Super admins can manage society subscriptions"
@@ -201,8 +220,11 @@ CREATE POLICY "Super admins can manage society subscriptions"
   USING (public.is_super_admin(auth.uid()))
   WITH CHECK (public.is_super_admin(auth.uid()));
 
+-- ============================================================================
 -- ------------------------------------------------------------
 -- 3. SEED DEFAULT SUBSCRIPTION PLANS
+-- ============================================================================
+
 -- ------------------------------------------------------------
 INSERT INTO public.subscription_plans (
   code,
@@ -377,3 +399,4 @@ ON CONFLICT (code) DO UPDATE SET
   enabled_features = EXCLUDED.enabled_features,
   sort_order = EXCLUDED.sort_order,
   updated_at = NOW();
+

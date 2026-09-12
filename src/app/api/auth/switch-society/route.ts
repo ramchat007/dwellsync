@@ -27,10 +27,29 @@ export async function POST(req: Request) {
         .maybeSingle();
 
       if (!membership) {
-        return NextResponse.json(
-          { error: "Access denied to target society tenant" },
-          { status: 403 }
-        );
+        // Check active company society access
+        const { data: companyAccess } = await adminClient
+          .from("management_company_society_access")
+          .select(`
+            id,
+            status,
+            member:management_company_members!inner(user_id, status, company:management_companies!inner(status)),
+            company_society:management_company_societies!inner(society_id, status)
+          `)
+          .eq("member.user_id", identity.effectiveUser.id)
+          .eq("member.status", "ACTIVE")
+          .eq("member.company.status", "ACTIVE")
+          .eq("company_society.society_id", societyId)
+          .eq("company_society.status", "ACTIVE")
+          .eq("status", "ACTIVE")
+          .maybeSingle();
+
+        if (!companyAccess) {
+          return NextResponse.json(
+            { error: "Access denied to target society tenant" },
+            { status: 403 }
+          );
+        }
       }
     }
 

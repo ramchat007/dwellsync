@@ -4,11 +4,13 @@ import { createServerSupabaseClient } from "../supabase/server";
 import { createAdminClient } from "../supabase/admin";
 import { getActiveImpersonationSession } from "./impersonation";
 import { getAuthSessionCookie } from "./session";
-import { getPermissionsForRole, roleHasPermission } from "./permissions";
+import { getPermissionsForRole, roleHasPermission, getPermissionsForCompanyRole, companyRoleHasPermission, PERMISSIONS } from "./permissions";
 import { UserIdentity } from "../types/auth";
 import { Profile, RoleId, Society, SocietyMembership } from "../types/database";
+import { ManagementCompany, ManagementCompanyMember, CompanyRole } from "../types/company";
 
-export { roleHasPermission, getPermissionsForRole };
+export { roleHasPermission, getPermissionsForRole, companyRoleHasPermission, getPermissionsForCompanyRole };
+
 
 export const ACTIVE_SOCIETY_COOKIE_NAME = "DwellSyncHub_active_society";
 
@@ -166,13 +168,46 @@ export async function getCurrentIdentity(): Promise<UserIdentity | null> {
 
   // Match preferred society from cookie or pick primary active membership
   let activeMembership = activeMemberships.find((m) => m.society_id === preferredSocietyId);
-  if (!activeMembership && activeMemberships.length > 0) {
+  let userRole: RoleId | null = null;
+  let userSociety: Society | null = null;
+
+  if (activeMembership) {
+    userRole = (activeMembership.role_id || "RESIDENT") as RoleId;
+    userSociety = (activeMembership.society as Society) || null;
+  } else if (preferredSocietyId) {
+    // Check if user is accessing this society under active company society access
+    const { data: companyAccess } = await adminClient
+      .from("management_company_society_access")
+      .select(`
+        id,
+        status,
+        member:management_company_members!inner(user_id, status, company:management_companies!inner(status)),
+        company_society:management_company_societies!inner(society_id, status, society:societies(*))
+      `)
+      .eq("member.user_id", resolvedUserId)
+      .eq("member.status", "ACTIVE")
+      .eq("member.company.status", "ACTIVE")
+      .eq("company_society.society_id", preferredSocietyId)
+      .eq("company_society.status", "ACTIVE")
+      .eq("status", "ACTIVE")
+      .maybeSingle();
+
+    const companySoc = (companyAccess as any)?.company_society;
+    if (companySoc?.society) {
+      userSociety = companySoc.society as Society;
+      userRole = null; // No direct society role; access is scoped to company layer only
+    } else if (activeMemberships.length > 0) {
+      activeMembership = activeMemberships[0];
+      userRole = (activeMembership.role_id || "RESIDENT") as RoleId;
+      userSociety = (activeMembership.society as Society) || null;
+    }
+  } else if (activeMemberships.length > 0) {
     activeMembership = activeMemberships[0];
+    userRole = (activeMembership.role_id || "RESIDENT") as RoleId;
+    userSociety = (activeMembership.society as Society) || null;
   }
 
-  const userRole = (activeMembership?.role_id || "RESIDENT") as RoleId;
-  const userSociety = (activeMembership?.society as Society) || null;
-  const permissions = getPermissionsForRole(userRole);
+  const permissions = userRole ? getPermissionsForRole(userRole) : [];
 
   return {
     user: { id: resolvedUserId, email: resolvedEmail },
@@ -245,11 +280,181 @@ export async function requireSocietyAccess(
     .maybeSingle();
 
   if (!membership) {
+    // Check explicit active company society access
+    const { data: companyAccess } = await adminClient
+      .from("management_company_society_access")
+      .select(`
+        id,
+        status,
+        member:management_company_members!inner (
+          id,
+          user_id,
+          role,
+          status,
+          company:management_companies!inner (
+            id,
+            status
+          )
+        ),
+        company_society:management_company_societies!inner (
+          id,
+          society_id,
+          status
+        )
+      `)
+      .eq("member.user_id", identity.effectiveUser.id)
+      .eq("member.status", "ACTIVE")
+      .eq("member.company.status", "ACTIVE")
+      .eq("company_society.society_id", societyId)
+      .eq("company_society.status", "ACTIVE")
+      .eq("status", "ACTIVE")
+      .maybeSingle();
+
+    if (!companyAccess) {
+      redirect("/unauthorized");
+    }
+  }
+
+  // Strictly scope the returned identity's role, permissions, and society to the target societyId
+  const scopedRole = membership ? (membership.role_id as RoleId) : null;
+  const scopedPermissions = scopedRole ? getPermissionsForRole(scopedRole) : [];
+
+  const scopedIdentity: UserIdentity = {
+    ...identity,
+    currentSociety: society as Society,
+    currentRole: scopedRole as any,
+    permissions: scopedPermissions,
+    isSocietyAdmin: scopedRole === "SOCIETY_ADMIN",
+  };
+
+  return { identity: scopedIdentity, society: society as Society };
+}
+
+export interface CompanyAccessContext {
+  identity: UserIdentity;
+  company: ManagementCompany;
+  membership?: ManagementCompanyMember | null;
+  role: CompanyRole | "SUPER_ADMIN";
+  permissions: string[];
+}
+
+export async function requireCompanyAccess(companyId: string): Promise<CompanyAccessContext> {
+  const identity = await requireAuth();
+  const adminClient = createAdminClient();
+
+  const { data: company, error } = await adminClient
+    .from("management_companies")
+    .select("*")
+    .eq("id", companyId)
+    .single();
+
+  if (error || !company || company.status !== "ACTIVE") {
     redirect("/unauthorized");
   }
 
-  return { identity, society: society as Society };
+  if (identity.isSuperAdmin && !identity.isImpersonating) {
+    return {
+      identity,
+      company: company as ManagementCompany,
+      membership: null,
+      role: "SUPER_ADMIN",
+      permissions: Object.values(PERMISSIONS),
+    };
+  }
+
+  const { data: member } = await adminClient
+    .from("management_company_members")
+    .select("*")
+    .eq("management_company_id", companyId)
+    .eq("user_id", identity.effectiveUser.id)
+    .eq("status", "ACTIVE")
+    .maybeSingle();
+
+  if (!member) {
+    redirect("/unauthorized");
+  }
+
+  const role = member.role as CompanyRole;
+  const permissions = getPermissionsForCompanyRole(role);
+
+  return {
+    identity,
+    company: company as ManagementCompany,
+    membership: member as ManagementCompanyMember,
+    role,
+    permissions,
+  };
 }
+
+export async function requireCompanyRole(
+  companyId: string,
+  allowedRoles: CompanyRole | CompanyRole[]
+): Promise<CompanyAccessContext> {
+  const context = await requireCompanyAccess(companyId);
+  const roles = Array.isArray(allowedRoles) ? allowedRoles : [allowedRoles];
+
+  if (context.role === "SUPER_ADMIN") {
+    return context;
+  }
+
+  if (!roles.includes(context.role as CompanyRole)) {
+    redirect("/unauthorized");
+  }
+
+  return context;
+}
+
+export async function requireCompanySocietyAccess(
+  companyId: string,
+  societyId: string
+): Promise<{ companyContext: CompanyAccessContext; society: Society }> {
+  const companyContext = await requireCompanyAccess(companyId);
+  const adminClient = createAdminClient();
+
+  const { data: society } = await adminClient
+    .from("societies")
+    .select("*")
+    .eq("id", societyId)
+    .single();
+
+  if (!society) {
+    redirect("/unauthorized");
+  }
+
+  if (companyContext.role === "SUPER_ADMIN") {
+    return { companyContext, society: society as Society };
+  }
+
+  // Verify company has this society assigned actively
+  const { data: companySociety } = await adminClient
+    .from("management_company_societies")
+    .select("id, status")
+    .eq("management_company_id", companyId)
+    .eq("society_id", societyId)
+    .eq("status", "ACTIVE")
+    .maybeSingle();
+
+  if (!companySociety) {
+    redirect("/unauthorized");
+  }
+
+  // Verify member has explicit active access to this society
+  const { data: access } = await adminClient
+    .from("management_company_society_access")
+    .select("id, status")
+    .eq("management_company_id", companyId)
+    .eq("management_company_member_id", companyContext.membership!.id)
+    .eq("management_company_society_id", companySociety.id)
+    .eq("status", "ACTIVE")
+    .maybeSingle();
+
+  if (!access) {
+    redirect("/unauthorized");
+  }
+
+  return { companyContext, society: society as Society };
+}
+
 
 export async function requireRole(allowedRoles: RoleId | RoleId[]): Promise<UserIdentity> {
   const identity = await requireAuth();

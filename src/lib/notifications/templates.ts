@@ -116,6 +116,18 @@ export const NOTIFICATION_TEMPLATES: Record<NotificationType, NotificationTempla
     bodyTemplate: (p) => 'Official receipt for payment of ₹' + (p.amount || 0) + ' is now available.',
     actionUrlTemplate: () => '/resident/billing',
   },
+  PAYMENT_OVERDUE: {
+    category: 'BILLING',
+    titleTemplate: (p) => 'Payment Overdue: ₹' + (p.amount || 0),
+    bodyTemplate: (p) => 'Payment for invoice ' + (p.invoiceNumber || '') + ' was due on ' + (p.dueDate || 'recently') + '. Please clear your dues.',
+    actionUrlTemplate: () => '/resident/billing',
+  },
+  BILLING_CYCLE_STARTED: {
+    category: 'BILLING',
+    titleTemplate: (p) => 'New Billing Cycle: ' + (p.period || 'Current Period'),
+    bodyTemplate: (p) => 'Maintenance billing cycle for ' + (p.period || 'this period') + ' has been initialized.',
+    actionUrlTemplate: () => '/resident/billing',
+  },
 
   // Circulars & Notices
   NOTICE_PUBLISHED: {
@@ -251,6 +263,38 @@ export const NOTIFICATION_TEMPLATES: Record<NotificationType, NotificationTempla
     actionUrlTemplate: (p) => p.actionUrl || '/resident/dashboard',
   },
 
+  // System & Access Alerts
+  SYSTEM_ALERT: {
+    category: 'GENERAL',
+    titleTemplate: (p) => p.title || 'System Notification',
+    bodyTemplate: (p) => p.message || p.body || 'A system-wide advisory has been issued.',
+    actionUrlTemplate: () => '/resident/dashboard',
+  },
+  ACCOUNT_SECURITY_ALERT: {
+    category: 'SECURITY',
+    titleTemplate: (p) => p.title || 'Security Alert',
+    bodyTemplate: (p) => p.message || 'A security event was detected on your account. If this was not you, please verify your credentials.',
+    actionUrlTemplate: () => '/resident/settings',
+  },
+  ACCESS_REQUEST_SUBMITTED: {
+    category: 'GENERAL',
+    titleTemplate: (p) => 'Access Request Received: ' + (p.userName || 'New Member'),
+    bodyTemplate: (p) => (p.userName || 'A user') + ' requested access to unit ' + (p.unitNumber || '') + '.',
+    actionUrlTemplate: () => '/society/dashboard',
+  },
+  ACCESS_REQUEST_APPROVED: {
+    category: 'GENERAL',
+    titleTemplate: () => 'Society Access Approved',
+    bodyTemplate: (p) => 'Your request to join ' + (p.societyName || 'the society') + ' has been approved. Welcome!',
+    actionUrlTemplate: () => '/resident/dashboard',
+  },
+  ACCESS_REQUEST_REJECTED: {
+    category: 'GENERAL',
+    titleTemplate: () => 'Society Access Request Update',
+    bodyTemplate: (p) => 'Your access request was declined' + (p.reason ? ': ' + p.reason : '. Please contact administration.'),
+    actionUrlTemplate: () => '/login',
+  },
+
   // Phase 13 Handover Notifications
   HANDOVER_CHECKLIST_ASSIGNED: {
     category: 'GENERAL',
@@ -349,6 +393,18 @@ const MARATHI_TEMPLATES: Partial<Record<NotificationType, { titleTemplate?: (p: 
     titleTemplate: (p) => 'तक्रार पुन्हा उघडली: #' + (p.ticketNumber || p.complaintId || ''),
     bodyTemplate: (p) => 'तक्रार पुन्हा उघडली आहे. कारण: ' + (p.reason || 'अनिराकरण'),
   },
+  COMPLAINT_SLA_WARNING: {
+    titleTemplate: (p) => 'एसएलए इशारा: तिकीट #' + (p.ticketNumber || p.complaintId || ''),
+    bodyTemplate: (p) => 'तक्रार "' + (p.title || 'तक्रार') + '" ची मुदत लवकरच संपत आहे.',
+  },
+  COMPLAINT_SLA_BREACHED: {
+    titleTemplate: (p) => 'एसएलए मर्यादा ओलांडली: तिकीट #' + (p.ticketNumber || p.complaintId || ''),
+    bodyTemplate: (p) => 'तक्रार "' + (p.title || 'तक्रार') + '" ने एसएलए मुदत ओलांडली आहे.',
+  },
+  COMPLAINT_ESCALATED: {
+    titleTemplate: (p) => 'तक्रार वर्ग केली (पातळी ' + (p.level || 1) + '): #' + (p.ticketNumber || p.complaintId || ''),
+    bodyTemplate: (p) => 'तक्रार "' + (p.title || 'तक्रार') + '" उच्च पातळीवर वर्ग केली आहे.',
+  },
   INVOICE_GENERATED: {
     titleTemplate: (p) => 'नवीन देखभाल चलन: ' + (p.invoiceNumber || ''),
     bodyTemplate: (p) => (p.period || 'कालावधी') + ' साठी ₹' + (p.amount || 0) + ' चे चलन जारी केले आहे. देय तारीख: ' + (p.dueDate || 'लागू नाही') + '.',
@@ -384,6 +440,34 @@ const MARATHI_TEMPLATES: Partial<Record<NotificationType, { titleTemplate?: (p: 
   MEETING_PUBLISHED: {
     titleTemplate: (p) => 'बैठक नियोजित: ' + (p.meetingTitle || 'बैठक'),
     bodyTemplate: (p) => (p.date || '') + ' रोजी बैठक आयोजित केली आहे. विषय: ' + (p.agenda || 'सर्वसाधारण चर्चा') + '.',
+  },
+  PAYMENT_OVERDUE: {
+    titleTemplate: (p) => 'देयक थकीत: ₹' + (p.amount || 0),
+    bodyTemplate: (p) => 'चलन ' + (p.invoiceNumber || '') + ' चे देयक ' + (p.dueDate || 'नुकतेच') + ' थकीत झाले आहे. कृपया रक्कम भरा.',
+  },
+  BILLING_CYCLE_STARTED: {
+    titleTemplate: (p) => 'नवीन बिलिंग सायकल: ' + (p.period || 'कालावधी'),
+    bodyTemplate: (p) => (p.period || 'या कालावधी') + 'साठी देखभाल शुल्क बिलिंग सुरू झाले आहे.',
+  },
+  SYSTEM_ALERT: {
+    titleTemplate: (p) => p.title || 'प्रणाली सूचना',
+    bodyTemplate: (p) => p.message || p.body || 'प्रणालीकडून महत्त्वाची सूचना जारी केली आहे.',
+  },
+  ACCOUNT_SECURITY_ALERT: {
+    titleTemplate: (p) => p.title || 'सुरक्षा इशारा',
+    bodyTemplate: (p) => p.message || 'आपल्या खात्यावर सुरक्षा घटना आढळली आहे. कृपया पडताळणी करा.',
+  },
+  ACCESS_REQUEST_SUBMITTED: {
+    titleTemplate: (p) => 'प्रवेश विनंती प्राप्त: ' + (p.userName || 'नवीन सदस्य'),
+    bodyTemplate: (p) => (p.userName || 'एका युझरने') + ' सदनिका ' + (p.unitNumber || '') + ' साठी प्रवेश विनंती पाठवली आहे.',
+  },
+  ACCESS_REQUEST_APPROVED: {
+    titleTemplate: () => 'सोसायटी प्रवेश मंजूर',
+    bodyTemplate: (p) => (p.societyName || 'सोसायटी') + ' मध्ये सामील होण्याची आपली विनंती मंजूर करण्यात आली आहे. स्वागत!',
+  },
+  ACCESS_REQUEST_REJECTED: {
+    titleTemplate: () => 'सोसायटी प्रवेश विनंती अपडेट',
+    bodyTemplate: (p) => 'आपली विनंती नाकारण्यात आली आहे' + (p.reason ? ': ' + p.reason : '. प्रशासनाशी संपर्क साधा.'),
   },
 };
 
@@ -432,6 +516,18 @@ const HINDI_TEMPLATES: Partial<Record<NotificationType, { titleTemplate?: (p: Re
     titleTemplate: (p) => 'शिकायत पुनः खोली गई: #' + (p.ticketNumber || p.complaintId || ''),
     bodyTemplate: (p) => 'शिकायत पुनः खोल दी गई है। कारण: ' + (p.reason || 'अनिराकरण'),
   },
+  COMPLAINT_SLA_WARNING: {
+    titleTemplate: (p) => 'एसएलए चेतावनी: टिकट #' + (p.ticketNumber || p.complaintId || ''),
+    bodyTemplate: (p) => 'शिकायत "' + (p.title || 'शिकायत') + '" की समय-सीमा जल्द समाप्त हो रही है।',
+  },
+  COMPLAINT_SLA_BREACHED: {
+    titleTemplate: (p) => 'एसएलए उल्लंघन: टिकट #' + (p.ticketNumber || p.complaintId || ''),
+    bodyTemplate: (p) => 'शिकायत "' + (p.title || 'शिकायत') + '" ने अपनी एसएलए समय-सीमा पार कर ली है।',
+  },
+  COMPLAINT_ESCALATED: {
+    titleTemplate: (p) => 'शिकायत अग्रेषित (स्तर ' + (p.level || 1) + '): #' + (p.ticketNumber || p.complaintId || ''),
+    bodyTemplate: (p) => 'शिकायत "' + (p.title || 'शिकायत') + '" को स्तर ' + (p.level || 1) + ' पर अग्रेषित किया गया है।',
+  },
   INVOICE_GENERATED: {
     titleTemplate: (p) => 'नया रखरखाव चालान: ' + (p.invoiceNumber || ''),
     bodyTemplate: (p) => (p.period || 'अवधि') + ' के लिए ₹' + (p.amount || 0) + ' का चालान जारी किया गया है। नियत तिथि: ' + (p.dueDate || 'लागू नहीं') + '।',
@@ -467,6 +563,34 @@ const HINDI_TEMPLATES: Partial<Record<NotificationType, { titleTemplate?: (p: Re
   MEETING_PUBLISHED: {
     titleTemplate: (p) => 'बैठक निर्धारित: ' + (p.meetingTitle || 'बैठक'),
     bodyTemplate: (p) => (p.date || '') + ' को बैठक निर्धारित की गई है। एजेंडा: ' + (p.agenda || 'सामान्य चर्चा') + '।',
+  },
+  PAYMENT_OVERDUE: {
+    titleTemplate: (p) => 'भुगतान बकाया: ₹' + (p.amount || 0),
+    bodyTemplate: (p) => 'चालान ' + (p.invoiceNumber || '') + ' का भुगतान ' + (p.dueDate || 'हाल ही में') + ' देय था। कृपया बकाया राशि का भुगतान करें।',
+  },
+  BILLING_CYCLE_STARTED: {
+    titleTemplate: (p) => 'नया बिलिंग चक्र: ' + (p.period || 'अवधि'),
+    bodyTemplate: (p) => (p.period || 'इस अवधि') + ' के लिए रखरखाव शुल्क बिलिंग चक्र शुरू हो गया है।',
+  },
+  SYSTEM_ALERT: {
+    titleTemplate: (p) => p.title || 'सिस्टम अधिसूचना',
+    bodyTemplate: (p) => p.message || p.body || 'प्रशासन द्वारा महत्वपूर्ण सिस्टम परामर्श जारी किया गया है।',
+  },
+  ACCOUNT_SECURITY_ALERT: {
+    titleTemplate: (p) => p.title || 'सुरक्षा चेतावनी',
+    bodyTemplate: (p) => p.message || 'आपके खाते पर एक सुरक्षा घटना का पता चला है। कृपया अपने विवरण की पुष्टि करें।',
+  },
+  ACCESS_REQUEST_SUBMITTED: {
+    titleTemplate: (p) => 'प्रवेश अनुरोध प्राप्त: ' + (p.userName || 'नया सदस्य'),
+    bodyTemplate: (p) => (p.userName || 'एक उपयोगकर्ता') + ' ने फ्लैट ' + (p.unitNumber || '') + ' के लिए प्रवेश का अनुरोध किया है।',
+  },
+  ACCESS_REQUEST_APPROVED: {
+    titleTemplate: () => 'सोसायटी प्रवेश स्वीकृत',
+    bodyTemplate: (p) => (p.societyName || 'सोसायटी') + ' में शामिल होने का आपका अनुरोध स्वीकार कर लिया गया है। स्वागत है!',
+  },
+  ACCESS_REQUEST_REJECTED: {
+    titleTemplate: () => 'प्रवेश अनुरोध अपडेट',
+    bodyTemplate: (p) => 'आपका अनुरोध अस्वीकार कर दिया गया है' + (p.reason ? ': ' + p.reason : '। कृपया प्रशासन से संपर्क करें।'),
   },
 };
 

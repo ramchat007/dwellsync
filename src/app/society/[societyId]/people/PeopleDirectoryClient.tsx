@@ -61,6 +61,13 @@ export function PeopleDirectoryClient({
   const [actionError, setActionError] = useState<string | null>(null);
   const [inviteSuccessToken, setInviteSuccessToken] = useState<string | null>(null);
 
+  // Role Modification State
+  const [isEditRoleOpen, setIsEditRoleOpen] = useState(false);
+  const [editingMember, setEditingMember] = useState<(SocietyMembership & { profile: Profile }) | null>(null);
+  const [selectedNewRole, setSelectedNewRole] = useState<RoleId>("RESIDENT");
+  const [isUpdatingRole, setIsUpdatingRole] = useState(false);
+  const [roleUpdateError, setRoleUpdateError] = useState<string | null>(null);
+
   // Access Requests State
   const [accessRequests, setAccessRequests] = useState<any[]>([]);
   const [isLoadingRequests, setIsLoadingRequests] = useState(false);
@@ -120,6 +127,61 @@ export function PeopleDirectoryClient({
       console.error(err);
     } finally {
       setProcessingRequestId(null);
+    }
+  };
+
+  const handleRoleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingMember) return;
+    try {
+      setIsUpdatingRole(true);
+      setRoleUpdateError(null);
+
+      const res = await fetch(`/api/society/${societyId}/members/${editingMember.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role_id: selectedNewRole }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setMembers((prev) =>
+          prev.map((m) => (m.id === editingMember.id ? { ...m, role_id: selectedNewRole } : m))
+        );
+        setIsEditRoleOpen(false);
+        setEditingMember(null);
+        router.refresh();
+      } else {
+        setRoleUpdateError(data.error || "Failed to update member role");
+      }
+    } catch (err: any) {
+      console.error(err);
+      setRoleUpdateError("Network error updating role");
+    } finally {
+      setIsUpdatingRole(false);
+    }
+  };
+
+  const handleRemoveMember = async (member: SocietyMembership & { profile: Profile }) => {
+    const confirmName = member.profile?.full_name || member.profile?.email || "this member";
+    if (!confirm(`Are you sure you want to revoke and terminate membership for ${confirmName}?`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/society/${societyId}/members/${member.id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setMembers((prev) => prev.filter((m) => m.id !== member.id));
+        router.refresh();
+      } else {
+        alert(data.error || "Failed to remove member");
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert("Network error removing member");
     }
   };
 
@@ -362,7 +424,8 @@ export function PeopleDirectoryClient({
                 <TableHead>Assigned Role</TableHead>
                 <TableHead>Unit / Flat</TableHead>
                 <TableHead>Membership Status</TableHead>
-                <TableHead className="text-right">Joined Date</TableHead>
+                <TableHead>Joined Date</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -406,14 +469,40 @@ export function PeopleDirectoryClient({
                       </Badge>
                     </TableCell>
 
-                    <TableCell className="text-right font-mono text-xs text-slate-500">
+                    <TableCell className="font-mono text-xs text-slate-500">
                       {formatDate(member.joined_at || member.created_at)}
+                    </TableCell>
+
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setEditingMember(member);
+                            setSelectedNewRole(member.role_id);
+                            setRoleUpdateError(null);
+                            setIsEditRoleOpen(true);
+                          }}
+                          className="text-[11px] h-7 px-2 text-indigo-600 hover:text-indigo-800 font-medium"
+                        >
+                          Edit Role
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveMember(member)}
+                          className="text-[11px] h-7 px-2 text-red-600 hover:text-red-800 font-medium"
+                        >
+                          Remove
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="py-12 text-center text-slate-400 text-xs">
+                  <TableCell colSpan={6} className="py-12 text-center text-slate-400 text-xs">
                     {search || activeTab !== "all"
                       ? "No matching people found."
                       : "No members registered in this society."}
@@ -604,6 +693,72 @@ export function PeopleDirectoryClient({
             </DialogFooter>
           </form>
         )}
+      </Dialog>
+
+      {/* Edit Role Dialog */}
+      <Dialog open={isEditRoleOpen} onOpenChange={setIsEditRoleOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-bold flex items-center gap-2">
+              <Shield className="w-4 h-4 text-indigo-600" />
+              Update Member Role
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Assign a new operational or committee role to{" "}
+              <span className="font-semibold text-slate-800">
+                {editingMember?.profile?.full_name || editingMember?.profile?.email}
+              </span>
+              .
+            </DialogDescription>
+          </DialogHeader>
+
+          {roleUpdateError && (
+            <div className="p-2.5 bg-red-50 border border-red-200 text-red-800 rounded-lg text-xs">
+              {roleUpdateError}
+            </div>
+          )}
+
+          <form onSubmit={handleRoleUpdate} className="space-y-3.5 mt-2 text-xs">
+            <div className="space-y-1">
+              <label className="font-semibold text-slate-700">Select Role</label>
+              <Select
+                value={selectedNewRole}
+                onChange={(e) => setSelectedNewRole(e.target.value as RoleId)}
+              >
+                {ROLE_OPTIONS.filter((r) => r.value !== "SUPER_ADMIN").map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label} ({opt.category})
+                  </option>
+                ))}
+              </Select>
+              <p className="text-[11px] text-slate-500">
+                Current role: <span className="font-mono font-bold">{editingMember?.role_id}</span>. Privilege manipulation is strictly audited.
+              </p>
+            </div>
+
+            <DialogFooter className="pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsEditRoleOpen(false)}
+                disabled={isUpdatingRole}
+                size="sm"
+                className="text-xs"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={isUpdatingRole}
+                size="sm"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs"
+              >
+                {isUpdatingRole ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
+                Save Role
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
       </Dialog>
     </div>
   );
