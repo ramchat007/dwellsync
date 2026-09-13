@@ -47,8 +47,12 @@ export async function middleware(request: NextRequest) {
     isAuthenticated = false;
   }
 
-  // Fallback to secure session cookie
-  if (!isAuthenticated && request.cookies.get("DwellSyncHub_auth_session")?.value) {
+  // Fallback to secure session cookie or active impersonation token
+  if (
+    !isAuthenticated &&
+    (request.cookies.get("DwellSyncHub_auth_session")?.value ||
+      request.cookies.get("DwellSyncHub_impersonation_token")?.value)
+  ) {
     isAuthenticated = true;
   }
 
@@ -68,6 +72,11 @@ export async function middleware(request: NextRequest) {
   }
 
   if (isAuthenticated && pathname === "/login") {
+    const state = request.nextUrl.searchParams.get("state");
+    if (state === "unlinked" || state === "choose_community") {
+      return supabaseResponse;
+    }
+
     const redirectTo = request.nextUrl.searchParams.get("redirectTo");
     const target = redirectTo && redirectTo.startsWith("/") ? redirectTo : "/dashboard";
     const url = new URL(target, request.url);

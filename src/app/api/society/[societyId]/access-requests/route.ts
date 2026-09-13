@@ -10,7 +10,19 @@ export async function GET(
 ) {
   try {
     const { societyId } = await params;
-    await requireSocietyAccess(societyId);
+    const { identity } = await requireSocietyAccess(societyId);
+
+    // Administrative Role Enforcement: Only Super Admins and Society Admins/Secretaries/Managers
+    const isAuthorizedAdmin =
+      identity.isSuperAdmin ||
+      ["SOCIETY_ADMIN", "SECRETARY", "MANAGER"].includes(identity.currentRole || "");
+
+    if (!isAuthorizedAdmin) {
+      return NextResponse.json(
+        { error: "Unauthorized. Society administrative privileges required to view access requests." },
+        { status: 403 }
+      );
+    }
 
     const adminClient = createAdminClient();
     const { data: requests, error } = await adminClient
@@ -32,7 +44,7 @@ export async function GET(
     let finalRequests: any[] = requests || [];
 
     if (error) {
-      console.warn("[access-requests GET] society_access_requests not ready, fetching INVITED members from society_memberships:", error.message);
+      console.warn("[access-requests GET] society_access_requests fallback query:", error.message);
       const { data: invitedMembers } = await adminClient
         .from("society_memberships")
         .select(`
@@ -74,7 +86,10 @@ export async function GET(
       requests: finalRequests,
     });
   } catch (err: any) {
+    if (err?.digest?.startsWith?.("NEXT_REDIRECT") || err?.message === "NEXT_REDIRECT") {
+      return NextResponse.json({ error: "Unauthorized access to society" }, { status: 403 });
+    }
     console.error("[access-requests GET] Exception:", err);
-    return NextResponse.json({ error: "Unauthorized or server error" }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

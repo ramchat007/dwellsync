@@ -6,6 +6,8 @@ import { sendDomainNotification } from "@/lib/services/notificationService";
 
 export const dynamic = "force-dynamic";
 
+const ALLOWED_MEMBER_ROLES = ["OWNER", "TENANT", "RESIDENT"];
+
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ societyId: string; requestId: string }> }
@@ -14,12 +16,21 @@ export async function POST(
     const { societyId, requestId } = await params;
     const { identity } = await requireSocietyAccess(societyId);
 
-    const body = await req.json().catch(() => ({}));
-    const assignedRole = body.role || "RESIDENT"; // OWNER | TENANT | RESIDENT
+    // 1. Administrative Role Enforcement
+    const isAuthorizedAdmin =
+      identity.isSuperAdmin ||
+      ["SOCIETY_ADMIN", "SECRETARY", "MANAGER"].includes(identity.currentRole || "");
+
+    if (!isAuthorizedAdmin) {
+      return NextResponse.json(
+        { error: "Unauthorized. Society administrative privileges required to approve access requests." },
+        { status: 403 }
+      );
+    }
 
     const adminClient = createAdminClient();
 
-    // 1. Fetch access request
+    // 2. Fetch access request
     let request: any = null;
     const { data: reqData } = await adminClient
       .from("society_access_requests")
@@ -45,6 +56,8 @@ export async function POST(
           user_id: memData.user_id,
           unit_number: memData.unit_number,
           unit_id: null,
+          requested_role: memData.role_id,
+          status: memData.status === "INVITED" ? "PENDING" : memData.status,
           is_fallback: true,
         };
       }
@@ -54,16 +67,66 @@ export async function POST(
       return NextResponse.json({ error: "Access request not found." }, { status: 404 });
     }
 
-    // 2. Link Membership
+    // 3. Self-Approval Prevention
+    if (identity.effectiveUser.id === request.user_id) {
+      return NextResponse.json(
+        { error: "Requesters cannot approve their own access request." },
+        { status: 403 }
+      );
+    }
+
+    // 4. Status Validation: Only PENDING requests can be approved
+    if (request.status !== "PENDING") {
+      return NextResponse.json(
+        { error: `Cannot approve request with status '${request.status}'. Only pending requests can be approved.` },
+        { status: 400 }
+      );
+    }
+
+    // 5. Role Escalation Prevention: Restrict to valid resident roles
+    const body = await req.json().catch(() => ({}));
+    const rawRole = body.role ? String(body.role).toUpperCase().trim() : (request.requested_role || "RESIDENT");
+    const assignedRole = ALLOWED_MEMBER_ROLES.includes(rawRole) ? rawRole : "RESIDENT";
+
+    // 6. Duplicate Membership Check
+    const { data: existingActiveMember } = await adminClient
+      .from("society_memberships")
+      .select("id, role_id, status")
+      .eq("society_id", societyId)
+      .eq("user_id", request.user_id)
+      .eq("status", "ACTIVE")
+      .maybeSingle();
+
+    if (existingActiveMember) {
+      // User is already active in society; resolve request without duplicate membership
+      if (!request.is_fallback) {
+        await adminClient
+          .from("society_access_requests")
+          .update({
+            status: "APPROVED",
+            reviewed_by: identity.effectiveUser.id,
+            reviewed_at: new Date().toISOString(),
+          })
+          .eq("id", requestId);
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: "Applicant already holds active membership in this society.",
+      });
+    }
+
+    // 7. Create/Activate Society Membership
     const { error: memberErr } = await adminClient
       .from("society_memberships")
       .upsert(
         {
           society_id: societyId,
           user_id: request.user_id,
-          role_id: assignedRole,
+          role_id: assignedRole as any,
           unit_number: request.unit_number,
           status: "ACTIVE",
+          joined_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         },
         { onConflict: "society_id,user_id,role_id" }
@@ -74,9 +137,9 @@ export async function POST(
       return NextResponse.json({ error: "Failed to create society membership." }, { status: 500 });
     }
 
-    // 3. Resolve Unit ID if not present
+    // 8. Resolve Unit ID and link ownership or occupancy
     let unitId = request.unit_id;
-    if (!unitId) {
+    if (!unitId && request.unit_number) {
       const { data: unitRecord } = await adminClient
         .from("units")
         .select("id")
@@ -87,7 +150,6 @@ export async function POST(
       if (unitRecord) unitId = unitRecord.id;
     }
 
-    // 4. Link Ownership or Occupancy
     if (unitId) {
       if (assignedRole === "OWNER") {
         await adminClient
@@ -121,7 +183,7 @@ export async function POST(
       }
     }
 
-    // 5. Mark request as APPROVED
+    // 9. Update Access Request to APPROVED
     if (!request.is_fallback) {
       await adminClient
         .from("society_access_requests")
@@ -134,7 +196,7 @@ export async function POST(
         .eq("id", requestId);
     }
 
-    // 6. Audit Log
+    // 10. Record Audit Log
     await recordAuditLog({
       actorUserId: identity.effectiveUser.id,
       societyId,
@@ -148,7 +210,7 @@ export async function POST(
       },
     });
 
-    // 7. Notification Dispatch
+    // 11. Dispatch Notification to Requester
     if (request.user_id) {
       try {
         await sendDomainNotification({
@@ -158,20 +220,23 @@ export async function POST(
           data: {
             societyName: identity.currentSociety?.name || "Society",
             unitNumber: request.unit_number,
-            role: assignedRole,
           },
+          dedupKey: `access_req_approved_${requestId}`,
         });
       } catch (notifErr) {
-        console.warn("[access-requests approve] Notification dispatch warning:", notifErr);
+        console.warn("[access-requests approve] Notification warning:", notifErr);
       }
     }
 
     return NextResponse.json({
       success: true,
-      message: `Applicant successfully approved as ${assignedRole} for unit ${request.unit_number}.`,
+      message: `Access request approved. Applicant linked as ${assignedRole}.`,
     });
   } catch (err: any) {
+    if (err?.digest?.startsWith?.("NEXT_REDIRECT") || err?.message === "NEXT_REDIRECT") {
+      return NextResponse.json({ error: "Unauthorized access to society" }, { status: 403 });
+    }
     console.error("[access-requests approve] Exception:", err);
-    return NextResponse.json({ error: "Unauthorized or server error." }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

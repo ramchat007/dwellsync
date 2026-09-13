@@ -95,6 +95,9 @@ export async function getCurrentIdentity(): Promise<UserIdentity | null> {
         *,
         society:societies (*)
       `)
+      .eq("user_id", impersonationSession.target_user_id)
+      .eq("status", "ACTIVE");
+
     let currentSociety = impersonationSession.target_society || null;
     if (!currentSociety && impersonationSession.target_society_id) {
       if (targetMemberships && targetMemberships.length > 0) {
@@ -121,7 +124,7 @@ export async function getCurrentIdentity(): Promise<UserIdentity | null> {
       user: { id: resolvedUserId, email: resolvedEmail },
       profile: targetProfile,
       isAuthenticated: true,
-      isSuperAdmin: true,
+      isSuperAdmin: false,
       isSocietyAdmin: effectiveRole === "SOCIETY_ADMIN",
       isImpersonating: true,
       originalUser: fallbackProfile,
@@ -316,11 +319,15 @@ export async function requireSocietyAccess(
   }
 
   // Strictly scope the returned identity's role, permissions, and society to the target societyId
-  const scopedRole = membership ? (membership.role_id as RoleId) : null;
+  const effectiveRole = identity.isImpersonating
+    ? ((identity.impersonationSession?.target_role_id as RoleId) || (membership ? (membership.role_id as RoleId) : null))
+    : (membership ? (membership.role_id as RoleId) : null);
+  const scopedRole = effectiveRole;
   const scopedPermissions = scopedRole ? getPermissionsForRole(scopedRole) : [];
 
   const scopedIdentity: UserIdentity = {
     ...identity,
+    isSuperAdmin: false,
     currentSociety: society as Society,
     currentRole: scopedRole as any,
     permissions: scopedPermissions,

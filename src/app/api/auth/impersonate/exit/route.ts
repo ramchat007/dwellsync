@@ -8,6 +8,7 @@ export async function POST() {
     const result = await stopImpersonationAction();
     const response = NextResponse.json(result);
     response.cookies.delete(IMPERSONATION_COOKIE_NAME);
+    response.cookies.delete("DwellSyncHub_active_society");
     return response;
   } catch (error) {
     console.error("[API/impersonate/exit] Error:", error);

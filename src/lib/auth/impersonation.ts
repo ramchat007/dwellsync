@@ -137,7 +137,7 @@ export async function startImpersonationAction(
       };
     }
 
-    targetRoleId = (membership.role_id as RoleId) || targetRoleId;
+    targetRoleId = request.targetRoleId || (membership.role_id as RoleId);
   } else {
     const { data: firstMembership } = await adminClient
       .from("society_memberships")
@@ -224,6 +224,7 @@ export async function stopImpersonationAction(): Promise<ImpersonationResult> {
 
   if (!activeSession) {
     cookieStore.delete(IMPERSONATION_COOKIE_NAME);
+    cookieStore.delete("DwellSyncHub_active_society");
     return { success: true };
   }
 
@@ -238,6 +239,7 @@ export async function stopImpersonationAction(): Promise<ImpersonationResult> {
     .eq("id", activeSession.id);
 
   cookieStore.delete(IMPERSONATION_COOKIE_NAME);
+  cookieStore.delete("DwellSyncHub_active_society");
 
   await recordAuditLog({
     actorUserId: activeSession.original_admin_id,

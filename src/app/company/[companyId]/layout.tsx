@@ -12,6 +12,7 @@ import {
   Briefcase,
   ChevronRight,
   ArrowLeft,
+  ClipboardList,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -34,6 +35,11 @@ export default async function CompanyLayout({
       label: "Dashboard",
       href: `/company/${companyId}/dashboard`,
       icon: LayoutDashboard,
+    },
+    {
+      label: "Operations & Tasks",
+      href: `/company/${companyId}/operations`,
+      icon: ClipboardList,
     },
     {
       label: "Managed Societies",

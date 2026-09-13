@@ -114,7 +114,7 @@ export const PERMISSIONS = {
   INVENTORY_ISSUE: "inventory.issue",
   INVENTORY_ADJUST: "inventory.adjust",
 
-  // Phase 15 Property Management Company permissions
+  // Phase 15 & 16 Property Management Company permissions
   COMPANY_VIEW: "company.view",
   COMPANY_MANAGE: "company.manage",
   COMPANY_SOCIETIES_VIEW: "company.societies.view",
@@ -124,6 +124,10 @@ export const PERMISSIONS = {
   COMPANY_STAFF_VIEW: "company.staff.view",
   COMPANY_STAFF_MANAGE: "company.staff.manage",
   COMPANY_ANALYTICS_VIEW: "company.analytics.view",
+  COMPANY_OPERATIONS_VIEW: "company.operations.view",
+  COMPANY_OPERATIONS_MANAGE: "company.operations.manage",
+  COMPANY_TASKS_CREATE: "company.tasks.create",
+  COMPANY_TASKS_ASSIGN: "company.tasks.assign",
 } as const;
 
 export type PermissionKey = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

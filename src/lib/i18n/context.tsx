@@ -162,10 +162,22 @@ export function LanguageProvider({
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 }
 
+const defaultContextValue: LanguageContextType = {
+  locale: DEFAULT_LOCALE,
+  setLocale: async () => {},
+  t: (key: string, params?: Record<string, string | number>) => getTranslation(key, params, DEFAULT_LOCALE),
+  formatCurrency: (amount: number) => baseFormatCurrency(amount, DEFAULT_LOCALE),
+  formatDate: (date: Date | string | number, options?: Intl.DateTimeFormatOptions) => baseFormatDate(date, DEFAULT_LOCALE, options),
+  formatDateTime: (date: Date | string | number, options?: Intl.DateTimeFormatOptions) => baseFormatDateTime(date, DEFAULT_LOCALE, options),
+  formatNumber: (value: number, options?: Intl.NumberFormatOptions) => baseFormatNumber(value, DEFAULT_LOCALE, options),
+  supportedLocales: SUPPORTED_LOCALES,
+  isChangingLanguage: false,
+};
+
 export function useTranslation() {
   const context = useContext(LanguageContext);
   if (!context) {
-    throw new Error("useTranslation must be used within a LanguageProvider");
+    return defaultContextValue;
   }
   return context;
 }

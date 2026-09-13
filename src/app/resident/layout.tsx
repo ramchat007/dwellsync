@@ -21,6 +21,10 @@ export default async function ResidentLayout({
     redirect("/login");
   }
 
+  if (!identity.currentSociety && !identity.isSuperAdmin) {
+    redirect("/login?state=unlinked");
+  }
+
   const society = identity.currentSociety;
   const user = identity.effectiveUser;
 

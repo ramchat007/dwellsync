@@ -1,14 +1,16 @@
 import { NextResponse } from "next/server";
 import { authService } from "@/lib/auth/providers/authService";
+import { getAppOrigin, sanitizeRedirectPath } from "@/lib/auth/url";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const redirectTo = searchParams.get("redirectTo") || "/dashboard";
+    const origin = getAppOrigin(req);
+    const redirectTo = sanitizeRedirectPath(searchParams.get("redirectTo"), "/dashboard");
 
-    const { url, error } = await authService.getGoogleOAuthUrl(redirectTo);
+    const { url, error } = await authService.getGoogleOAuthUrl(redirectTo, origin);
     if (error || !url) {
       return NextResponse.json({ error: error || "OAuth provider not configured" }, { status: 500 });
     }

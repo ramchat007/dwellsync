@@ -12,8 +12,13 @@ export interface SessionPayload {
   expiresAt: number;
 }
 
-const SESSION_SECRET =
-  process.env.SUPABASE_SERVICE_ROLE_KEY || "DwellSyncHub-secure-session-secret-key-2026";
+export function getSessionSecret(): string {
+  return (
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    "DwellSyncHub-secure-session-secret-key-2026"
+  );
+}
 
 /**
  * Creates a cryptographically HMAC-signed session token
@@ -21,7 +26,7 @@ const SESSION_SECRET =
 export function signSessionToken(payload: SessionPayload): string {
   const data = Buffer.from(JSON.stringify(payload)).toString("base64url");
   const signature = crypto
-    .createHmac("sha256", SESSION_SECRET)
+    .createHmac("sha256", getSessionSecret())
     .update(data)
     .digest("base64url");
   return `${data}.${signature}`;
@@ -35,7 +40,7 @@ export function verifySessionToken(token: string): SessionPayload | null {
     if (!token || !token.includes(".")) return null;
     const [data, signature] = token.split(".");
     const expectedSignature = crypto
-      .createHmac("sha256", SESSION_SECRET)
+      .createHmac("sha256", getSessionSecret())
       .update(data)
       .digest("base64url");
 

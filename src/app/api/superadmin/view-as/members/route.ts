@@ -18,7 +18,49 @@ export async function GET(req: Request) {
     }
 
     const adminClient = createAdminClient();
-    let query = adminClient
+    if (roleId) {
+      const { data: roleMembers, error: roleError } = await adminClient
+        .from("society_memberships")
+        .select(`
+          user_id,
+          role_id,
+          unit_number,
+          profile:profiles (*)
+        `)
+        .eq("society_id", societyId)
+        .eq("status", "ACTIVE")
+        .eq("role_id", roleId);
+
+      if (roleError) {
+        console.error("[view-as members GET] Error:", roleError);
+        return NextResponse.json({ error: roleError.message }, { status: 500 });
+      }
+
+      if (roleMembers && roleMembers.length > 0) {
+        return NextResponse.json({ success: true, data: roleMembers, isFallbackRole: false });
+      }
+
+      // If no members exist for this specific role, allow selecting any active society member to test the persona
+      const { data: fallbackMembers, error: fallbackError } = await adminClient
+        .from("society_memberships")
+        .select(`
+          user_id,
+          role_id,
+          unit_number,
+          profile:profiles (*)
+        `)
+        .eq("society_id", societyId)
+        .eq("status", "ACTIVE");
+
+      if (fallbackError) {
+        console.error("[view-as members GET] Error:", fallbackError);
+        return NextResponse.json({ error: fallbackError.message }, { status: 500 });
+      }
+
+      return NextResponse.json({ success: true, data: fallbackMembers || [], isFallbackRole: true });
+    }
+
+    const { data, error } = await adminClient
       .from("society_memberships")
       .select(`
         user_id,
@@ -29,11 +71,6 @@ export async function GET(req: Request) {
       .eq("society_id", societyId)
       .eq("status", "ACTIVE");
 
-    if (roleId) {
-      query = query.eq("role_id", roleId);
-    }
-
-    const { data, error } = await query;
     if (error) {
       console.error("[view-as members GET] Error:", error);
       return NextResponse.json({ error: error.message }, { status: 500 });

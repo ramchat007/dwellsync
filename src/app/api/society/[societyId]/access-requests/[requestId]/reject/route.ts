@@ -14,31 +14,68 @@ export async function POST(
     const { societyId, requestId } = await params;
     const { identity } = await requireSocietyAccess(societyId);
 
+    // 1. Administrative Role Enforcement
+    const isAuthorizedAdmin =
+      identity.isSuperAdmin ||
+      ["SOCIETY_ADMIN", "SECRETARY", "MANAGER"].includes(identity.currentRole || "");
+
+    if (!isAuthorizedAdmin) {
+      return NextResponse.json(
+        { error: "Unauthorized. Society administrative privileges required to reject access requests." },
+        { status: 403 }
+      );
+    }
+
     const body = await req.json().catch(() => ({}));
     const reason = body?.reason || "Application declined by administration.";
 
     const adminClient = createAdminClient();
 
-    // 1. Fetch request to identify applicant
+    // 2. Fetch request to verify existence and society match
     let applicantUserId: string | null = null;
+    let currentStatus: string | null = null;
+    let existingNotes: string | null = null;
+
     const { data: existingReq } = await adminClient
       .from("society_access_requests")
-      .select("user_id")
+      .select("user_id, status, notes")
       .eq("id", requestId)
       .eq("society_id", societyId)
       .maybeSingle();
 
     if (existingReq) {
       applicantUserId = existingReq.user_id;
+      currentStatus = existingReq.status;
+      existingNotes = existingReq.notes;
     } else {
       const { data: mem } = await adminClient
         .from("society_memberships")
-        .select("user_id")
+        .select("user_id, status")
         .eq("id", requestId)
         .eq("society_id", societyId)
         .maybeSingle();
-      if (mem) applicantUserId = mem.user_id;
+      if (mem) {
+        applicantUserId = mem.user_id;
+        currentStatus = mem.status === "INVITED" ? "PENDING" : mem.status;
+      }
     }
+
+    if (!applicantUserId) {
+      return NextResponse.json({ error: "Access request not found." }, { status: 404 });
+    }
+
+    // 3. Status Validation: Cannot reject non-pending requests
+    if (currentStatus !== "PENDING") {
+      return NextResponse.json(
+        { error: `Cannot reject request with status '${currentStatus}'. Only pending requests can be rejected.` },
+        { status: 400 }
+      );
+    }
+
+    // 4. Update request status to REJECTED
+    const rejectionNote = existingNotes
+      ? `${existingNotes} [Declined: ${reason}]`
+      : `[Declined: ${reason}]`;
 
     const { data: updatedReq } = await adminClient
       .from("society_access_requests")
@@ -46,6 +83,7 @@ export async function POST(
         status: "REJECTED",
         reviewed_by: identity.effectiveUser.id,
         reviewed_at: new Date().toISOString(),
+        notes: rejectionNote,
       })
       .eq("id", requestId)
       .eq("society_id", societyId)
@@ -63,7 +101,7 @@ export async function POST(
         .eq("society_id", societyId);
     }
 
-    // 2. Audit Log
+    // 5. Record Audit Log
     await recordAuditLog({
       actorUserId: identity.effectiveUser.id,
       societyId,
@@ -76,7 +114,7 @@ export async function POST(
       },
     });
 
-    // 3. Notification Dispatch
+    // 6. Notification Dispatch
     if (applicantUserId) {
       try {
         await sendDomainNotification({
@@ -86,6 +124,7 @@ export async function POST(
           data: {
             reason,
           },
+          dedupKey: `access_req_rejected_${requestId}`,
         });
       } catch (notifErr) {
         console.warn("[access-requests reject] Notification dispatch warning:", notifErr);
@@ -97,7 +136,10 @@ export async function POST(
       message: "Access request rejected.",
     });
   } catch (err: any) {
+    if (err?.digest?.startsWith?.("NEXT_REDIRECT") || err?.message === "NEXT_REDIRECT") {
+      return NextResponse.json({ error: "Unauthorized access to society" }, { status: 403 });
+    }
     console.error("[access-requests reject] Exception:", err);
-    return NextResponse.json({ error: "Unauthorized or server error." }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

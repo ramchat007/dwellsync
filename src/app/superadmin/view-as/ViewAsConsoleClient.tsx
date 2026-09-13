@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/lib/auth/client";
 
 export function ViewAsConsoleClient({
   societies,
@@ -32,12 +33,14 @@ export function ViewAsConsoleClient({
   currentAdminEmail: string;
 }) {
   const router = useRouter();
+  const { refreshSession } = useAuth();
 
   const [selectedRole, setSelectedRole] = useState<RoleId>("RESIDENT");
   const [selectedSocietyId, setSelectedSocietyId] = useState<string>(societies[0]?.id || "");
   const [availableUsers, setAvailableUsers] = useState<
     { user_id: string; role_id: RoleId; unit_number?: string; profile?: Profile }[]
   >([]);
+  const [isFallbackRole, setIsFallbackRole] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [isLaunching, setIsLaunching] = useState(false);
@@ -53,11 +56,13 @@ export function ViewAsConsoleClient({
         setIsLoadingUsers(true);
         setError(null);
         const res = await fetch(
-          `/api/superadmin/view-as/members?societyId=${selectedSocietyId}&roleId=${selectedRole}`
+          `/api/superadmin/view-as/members?societyId=${selectedSocietyId}&roleId=${selectedRole}`,
+          { credentials: "include" }
         );
         const data = await res.json();
         if (isMounted && res.ok && data.success) {
           setAvailableUsers(data.data || []);
+          setIsFallbackRole(!!data.isFallbackRole);
           if (data.data && data.data.length > 0) {
             setSelectedUserId(data.data[0].user_id);
           } else {
@@ -96,6 +101,7 @@ export function ViewAsConsoleClient({
 
       const res = await fetch("/api/auth/impersonate/start", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           targetUserId: selectedUserId,
@@ -108,6 +114,7 @@ export function ViewAsConsoleClient({
       const data = await res.json();
 
       if (res.ok && data.success) {
+        await refreshSession();
         const targetPath = getDashboardPathForRole(selectedRole, selectedSocietyId);
         window.location.href = targetPath;
       } else {
@@ -281,6 +288,15 @@ export function ViewAsConsoleClient({
                 ) : (
                   <div className="p-3 rounded-lg border border-dashed border-amber-200 bg-amber-50 text-amber-900 text-xs">
                     No active {selectedRole} users currently registered in this society. You can create one from the Society People Directory.
+                  </div>
+                )}
+
+                {isFallbackRole && availableUsers.length > 0 && (
+                  <div className="p-2.5 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-900 text-[11px] flex items-center gap-2">
+                    <Sparkles className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                    <span>
+                      Testing persona <strong>{currentPersonaDef?.title}</strong> using active member account in this society.
+                    </span>
                   </div>
                 )}
               </div>

@@ -60,7 +60,7 @@ export function AuthProvider({
       currentRole: null,
       permissions: [],
       impersonationSession: null,
-      isLoading: true,
+      isLoading: initialIdentity === undefined,
     };
   });
 
@@ -110,7 +110,44 @@ export function AuthProvider({
   }, []);
 
   useEffect(() => {
-    if (!initialIdentity) {
+    if (initialIdentity !== undefined) {
+      if (initialIdentity) {
+        setState({
+          user: initialIdentity.user,
+          profile: initialIdentity.profile,
+          isAuthenticated: initialIdentity.isAuthenticated,
+          isSuperAdmin: initialIdentity.isSuperAdmin,
+          isSocietyAdmin: initialIdentity.isSocietyAdmin,
+          isImpersonating: initialIdentity.isImpersonating,
+          originalUser: initialIdentity.originalUser,
+          effectiveUser: initialIdentity.effectiveUser,
+          currentSociety: initialIdentity.currentSociety,
+          availableSocieties: initialIdentity.availableSocieties || [],
+          currentRole: initialIdentity.currentRole,
+          permissions: initialIdentity.permissions,
+          impersonationSession: initialIdentity.impersonationSession || null,
+          isLoading: false,
+        });
+      } else {
+        setState((prev) => ({
+          ...prev,
+          user: null,
+          profile: null,
+          isAuthenticated: false,
+          isSuperAdmin: false,
+          isSocietyAdmin: false,
+          isImpersonating: false,
+          originalUser: null,
+          effectiveUser: null,
+          currentSociety: null,
+          availableSocieties: [],
+          currentRole: null,
+          permissions: [],
+          impersonationSession: null,
+          isLoading: false,
+        }));
+      }
+    } else {
       refreshSession();
     }
   }, [initialIdentity, refreshSession]);

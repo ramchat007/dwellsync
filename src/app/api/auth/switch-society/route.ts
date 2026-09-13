@@ -15,8 +15,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Society ID is required" }, { status: 400 });
     }
 
-    // Verify membership or superadmin
-    if (!identity.isSuperAdmin) {
+    // Verify membership or superadmin (while not impersonating)
+    if (!identity.isSuperAdmin || identity.isImpersonating) {
       const adminClient = createAdminClient();
       const { data: membership } = await adminClient
         .from("society_memberships")

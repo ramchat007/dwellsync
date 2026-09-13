@@ -1,20 +1,25 @@
 import { IAuthProvider } from "./types";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { getAppOrigin, sanitizeRedirectPath } from "../url";
 
 export class GoogleAuthProvider implements IAuthProvider {
   readonly id = "google_oauth";
   readonly name = "Google OAuth";
   readonly isConfigured = true;
 
-  async getOAuthUrl(redirectTo?: string): Promise<{ url: string | null; error?: string }> {
+  async getOAuthUrl(
+    redirectTo?: string,
+    originOverride?: string
+  ): Promise<{ url: string | null; error?: string }> {
     try {
       const supabase = await createServerSupabaseClient();
-      const origin = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+      const origin = originOverride || getAppOrigin();
+      const safeRedirect = sanitizeRedirectPath(redirectTo, "/dashboard");
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${origin}/api/auth/callback?redirectTo=${encodeURIComponent(redirectTo || "/dashboard")}`,
+          redirectTo: `${origin}/api/auth/callback?redirectTo=${encodeURIComponent(safeRedirect)}`,
         },
       });
 

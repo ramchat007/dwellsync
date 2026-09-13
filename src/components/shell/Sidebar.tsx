@@ -172,7 +172,7 @@ export function Sidebar({ className }: { className?: string }) {
             >
               <Icon className="w-4 h-4 shrink-0" />
               <span className="truncate">{item.label}</span>
-              <span className="truncate">{getLabel(item.label)}</span>
+              {/* <span className="truncate">{getLabel(item.label)}</span> */}
             </Link>
           );
         })}

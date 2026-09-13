@@ -111,6 +111,104 @@ export interface ManagementCompanyStaffAssignment {
   };
 }
 
+export type CompanyTaskCategory =
+  | "FACILITY"
+  | "MAINTENANCE"
+  | "HOUSEKEEPING"
+  | "SECURITY"
+  | "ELECTRICAL"
+  | "PLUMBING"
+  | "LIFT"
+  | "FIRE_SAFETY"
+  | "COMMON_AREA"
+  | "VENDOR"
+  | "INSPECTION"
+  | "RESIDENT_FOLLOWUP"
+  | "GENERAL";
+
+export type CompanyTaskPriority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+
+export type CompanyTaskStatus = "OPEN" | "IN_PROGRESS" | "ON_HOLD" | "COMPLETED" | "CANCELLED";
+
+export interface ManagementCompanyTask {
+  id: string;
+  management_company_id: string;
+  society_id: string;
+  title: string;
+  description?: string | null;
+  category: CompanyTaskCategory;
+  priority: CompanyTaskPriority;
+  status: CompanyTaskStatus;
+  assigned_to?: string | null;
+  created_by?: string | null;
+  due_at?: string | null;
+  completed_at?: string | null;
+  metadata?: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+  society?: {
+    id: string;
+    name: string;
+    code: string;
+    city?: string | null;
+    state?: string | null;
+  };
+  assignee?: {
+    id: string;
+    email: string;
+    full_name: string;
+    phone?: string | null;
+    avatar_url?: string | null;
+  } | null;
+  creator?: {
+    id: string;
+    email: string;
+    full_name: string;
+  } | null;
+}
+
+export interface ManagementCompanyTaskComment {
+  id: string;
+  task_id: string;
+  management_company_id: string;
+  user_id: string;
+  comment: string;
+  created_at: string;
+  updated_at: string;
+  user?: {
+    id: string;
+    email: string;
+    full_name: string;
+    avatar_url?: string | null;
+  };
+}
+
+export interface CompanyTaskActivity {
+  id: string;
+  action: string;
+  actor_user_id: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  actor?: {
+    id: string;
+    email: string;
+    full_name: string;
+  } | null;
+}
+
+export interface SocietyOperationalSummary {
+  societyId: string;
+  societyName: string;
+  societyCode: string;
+  totalTasksCount: number;
+  openTasksCount: number;
+  inProgressTasksCount: number;
+  overdueTasksCount: number;
+  completedTasksCount: number;
+  activeStaffCount: number;
+  openComplaintsCount: number;
+}
+
 export interface CompanyDashboardMetrics {
   managedSocietiesCount: number;
   activeSocietiesCount: number;
@@ -118,10 +216,17 @@ export interface CompanyDashboardMetrics {
   totalBuildingsCount: number;
   totalUnitsCount: number;
   totalActiveMembersCount: number;
+  activeStaffCount: number;
+  activePropertyManagersCount: number;
   openComplaintsCount: number;
+  pendingTasksCount: number;
+  overdueTasksCount: number;
+  completedTasksCount: number;
   upcomingEventsCount: number;
   pendingAccessRequestsCount: number;
   upcomingMeetingsCount: number;
+  recentActivity?: CompanyTaskActivity[];
+  societySummaries?: SocietyOperationalSummary[];
 }
 
 export const COMPANY_ROLE_PRECEDENCE: Record<CompanyRole, number> = {
@@ -140,6 +245,10 @@ export const COMPANY_PERMISSIONS = {
   COMPANY_STAFF_VIEW: "company.staff.view",
   COMPANY_STAFF_MANAGE: "company.staff.manage",
   COMPANY_ANALYTICS_VIEW: "company.analytics.view",
+  COMPANY_OPERATIONS_VIEW: "company.operations.view",
+  COMPANY_OPERATIONS_MANAGE: "company.operations.manage",
+  COMPANY_TASKS_CREATE: "company.tasks.create",
+  COMPANY_TASKS_ASSIGN: "company.tasks.assign",
 } as const;
 
 export const COMPANY_ROLE_PERMISSIONS: Record<CompanyRole, string[]> = {
@@ -153,6 +262,10 @@ export const COMPANY_ROLE_PERMISSIONS: Record<CompanyRole, string[]> = {
     COMPANY_PERMISSIONS.COMPANY_STAFF_VIEW,
     COMPANY_PERMISSIONS.COMPANY_STAFF_MANAGE,
     COMPANY_PERMISSIONS.COMPANY_ANALYTICS_VIEW,
+    COMPANY_PERMISSIONS.COMPANY_OPERATIONS_VIEW,
+    COMPANY_PERMISSIONS.COMPANY_OPERATIONS_MANAGE,
+    COMPANY_PERMISSIONS.COMPANY_TASKS_CREATE,
+    COMPANY_PERMISSIONS.COMPANY_TASKS_ASSIGN,
   ],
   COMPANY_MANAGER: [
     COMPANY_PERMISSIONS.COMPANY_VIEW,
@@ -160,11 +273,17 @@ export const COMPANY_ROLE_PERMISSIONS: Record<CompanyRole, string[]> = {
     COMPANY_PERMISSIONS.COMPANY_STAFF_VIEW,
     COMPANY_PERMISSIONS.COMPANY_STAFF_MANAGE,
     COMPANY_PERMISSIONS.COMPANY_ANALYTICS_VIEW,
+    COMPANY_PERMISSIONS.COMPANY_OPERATIONS_VIEW,
+    COMPANY_PERMISSIONS.COMPANY_OPERATIONS_MANAGE,
+    COMPANY_PERMISSIONS.COMPANY_TASKS_CREATE,
+    COMPANY_PERMISSIONS.COMPANY_TASKS_ASSIGN,
   ],
   COMPANY_OPERATIONS: [
     COMPANY_PERMISSIONS.COMPANY_VIEW,
     COMPANY_PERMISSIONS.COMPANY_SOCIETIES_VIEW,
     COMPANY_PERMISSIONS.COMPANY_STAFF_VIEW,
+    COMPANY_PERMISSIONS.COMPANY_OPERATIONS_VIEW,
+    COMPANY_PERMISSIONS.COMPANY_TASKS_CREATE,
   ],
 };
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -41,9 +41,14 @@ export function FastLoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirectTo");
-  const { refreshSession } = useAuth();
+  const stateParam = searchParams.get("state");
+  const { refreshSession, availableSocieties } = useAuth();
 
-  const [step, setStep] = useState<LoginStep>("phone_input");
+  const [step, setStep] = useState<LoginStep>(() => {
+    if (stateParam === "unlinked") return "unlinked_account";
+    if (stateParam === "choose_community") return "choose_community";
+    return "phone_input";
+  });
   const [authMethod, setAuthMethod] = useState<"mobile" | "email">("mobile");
   const [identifier, setIdentifier] = useState("");
   const [displayPhone, setDisplayPhone] = useState("");
@@ -59,6 +64,27 @@ export function FastLoginForm() {
 
   // Post-auth state for multi-society/multi-role resolution
   const [authContext, setAuthContext] = useState<AuthContextResult | null>(null);
+
+  // Derived list of societies for multi-society selector
+  const displaySocieties = useMemo(() => {
+    if (authContext?.availableSocieties && authContext.availableSocieties.length > 0) {
+      return authContext.availableSocieties.map((s) => ({
+        id: s.id,
+        name: s.name,
+        code: s.code,
+        city: s.city,
+      }));
+    }
+    if (availableSocieties && availableSocieties.length > 0) {
+      return availableSocieties.map((m) => ({
+        id: m.society_id,
+        name: m.society?.name || "Housing Society",
+        code: m.society?.code || "",
+        city: m.society?.city || "India",
+      }));
+    }
+    return [];
+  }, [authContext, availableSocieties]);
 
   // Unlinked Request Access Form
   const [unlinkedMode, setUnlinkedMode] = useState<"choose" | "register" | "join">("choose");
@@ -85,7 +111,80 @@ export function FastLoginForm() {
   const [isLoadingSocieties, setIsLoadingSocieties] = useState(false);
   const [isLoadingUnits, setIsLoadingUnits] = useState(false);
 
+  // User's own access requests state
+  const [myAccessRequests, setMyAccessRequests] = useState<any[]>([]);
+  const [isLoadingMyRequests, setIsLoadingMyRequests] = useState(false);
+  const [cancellingRequestId, setCancellingRequestId] = useState<string | null>(null);
+
+  const fetchMyAccessRequests = useCallback(async () => {
+    try {
+      setIsLoadingMyRequests(true);
+      const res = await fetch("/api/auth/request-access");
+      const data = await res.json();
+      if (res.ok && data.requests) {
+        setMyAccessRequests(data.requests);
+      }
+    } catch (err) {
+      console.error("Failed to load user access requests:", err);
+    } finally {
+      setIsLoadingMyRequests(false);
+    }
+  }, []);
+
+  const handleCancelMyRequest = async (requestId: string) => {
+    try {
+      setCancellingRequestId(requestId);
+      const res = await fetch("/api/auth/request-access/cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ requestId }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        await fetchMyAccessRequests();
+      } else {
+        setError(data.error || "Failed to cancel request.");
+      }
+    } catch (err) {
+      setError("Network error cancelling request.");
+    } finally {
+      setCancellingRequestId(null);
+    }
+  };
+
+  const handleEnterApprovedSociety = async (societyId: string) => {
+    try {
+      setIsLoading(true);
+      await fetch("/api/auth/switch-society", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ societyId }),
+      });
+      await refreshSession();
+      window.location.href = `/society/${societyId}/dashboard`;
+    } catch (err) {
+      setError("Failed to enter society.");
+      setIsLoading(false);
+    }
+  };
+
   const otpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  // Fetch access requests when in unlinked_account step
+  useEffect(() => {
+    if (step === "unlinked_account") {
+      fetchMyAccessRequests();
+    }
+  }, [step, fetchMyAccessRequests]);
+
+  // Respond to query param state changes (?state=unlinked or ?state=choose_community)
+  useEffect(() => {
+    if (stateParam === "unlinked") {
+      setStep("unlinked_account");
+    } else if (stateParam === "choose_community") {
+      setStep("choose_community");
+    }
+  }, [stateParam]);
 
   // 30s Countdown timer for OTP resend
   useEffect(() => {
@@ -393,6 +492,7 @@ export function FastLoginForm() {
         return;
       }
       setRequestSent(true);
+      fetchMyAccessRequests();
     } catch (err) {
       setError("Failed to send request.");
     } finally {
@@ -477,7 +577,7 @@ export function FastLoginForm() {
               : step === "choose_role"
               ? "Choose how you want to continue"
               : step === "unlinked_account"
-              ? "Account Connected"
+              ? "Housing Society Access Required"
               : "Welcome to DwellSyncHub 👋"}
           </CardTitle>
           <CardDescription className="text-slate-400 text-xs">
@@ -486,7 +586,7 @@ export function FastLoginForm() {
               : step === "choose_community"
               ? "Select which housing society you want to access today."
               : step === "unlinked_account"
-              ? "Your account is verified. Connect to your housing society to begin."
+              ? "Your DwellSync account is authenticated. Select a society below to connect."
               : "Sign in to continue to your community."}
           </CardDescription>
         </CardHeader>
@@ -859,14 +959,14 @@ export function FastLoginForm() {
           {/* ========================================================================= */}
           {/* STEP 5: MULTI-SOCIETY SELECTION                                           */}
           {/* ========================================================================= */}
-          {step === "choose_community" && authContext && (
+          {step === "choose_community" && (
             <div className="space-y-3">
               <p className="text-[11px] text-slate-400">
                 You hold active memberships in multiple societies. Select one to proceed:
               </p>
 
               <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
-                {authContext.availableSocieties.map((soc) => (
+                {displaySocieties.map((soc) => (
                   <button
                     key={soc.id}
                     type="button"
@@ -896,11 +996,107 @@ export function FastLoginForm() {
               {/* Option Choice Screen */}
               {unlinkedMode === "choose" && (
                 <div className="space-y-3">
-                  <div className="text-[11px] text-slate-300">
-                    Your account is verified! Choose how you want to get started with DwellSync:
+                  <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 text-[11px] text-slate-300 space-y-1">
+                    <div className="font-semibold text-white flex items-center gap-1.5">
+                      <HelpCircle className="w-3.5 h-3.5 text-indigo-400" />
+                      <span>Housing Society Access Required</span>
+                    </div>
+                    <p className="text-slate-400 text-[10px] leading-relaxed">
+                      Your identity is authenticated, but you are not currently an active member of any housing society. Connect to your society below or register a new one.
+                    </p>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-2.5">
+                  {myAccessRequests.length > 0 && (
+                    <div className="space-y-2 pt-1">
+                      <div className="text-[11px] font-semibold text-slate-300 flex items-center justify-between">
+                        <span>My Society Access Requests</span>
+                        <button
+                          type="button"
+                          onClick={fetchMyAccessRequests}
+                          className="text-[10px] text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
+                        >
+                          <RefreshCw className={`w-3 h-3 ${isLoadingMyRequests ? "animate-spin" : ""}`} />
+                          <span>Refresh</span>
+                        </button>
+                      </div>
+
+                      <div className="space-y-2 max-h-[200px] overflow-y-auto pr-0.5">
+                        {myAccessRequests.map((req) => (
+                          <div
+                            key={req.id}
+                            className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 space-y-1.5"
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <div className="font-bold text-white text-xs">
+                                  {req.society?.name || "Housing Society"}
+                                </div>
+                                <div className="text-[10px] text-slate-400 font-mono">
+                                  Unit {req.unit_number} &middot; Role: {req.requested_role}
+                                </div>
+                              </div>
+                              <div>
+                                {req.status === "PENDING" && (
+                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30 animate-pulse">
+                                    Pending Approval
+                                  </span>
+                                )}
+                                {req.status === "APPROVED" && (
+                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                    Approved
+                                  </span>
+                                )}
+                                {req.status === "REJECTED" && (
+                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                                    Declined
+                                  </span>
+                                )}
+                                {req.status === "CANCELLED" && (
+                                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-500/20 text-slate-400 border border-slate-600/30">
+                                    Cancelled
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            {req.status === "PENDING" && (
+                              <div className="flex items-center justify-between pt-1 border-t border-slate-800/60 text-[10px]">
+                                <span className="text-slate-400">Awaiting administrator approval</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleCancelMyRequest(req.id)}
+                                  disabled={cancellingRequestId === req.id}
+                                  className="text-rose-400 hover:text-rose-300 font-medium"
+                                >
+                                  {cancellingRequestId === req.id ? "Cancelling..." : "Cancel Request"}
+                                </button>
+                              </div>
+                            )}
+
+                            {req.status === "APPROVED" && (
+                              <div className="pt-1.5 border-t border-slate-800/60">
+                                <Button
+                                  type="button"
+                                  onClick={() => handleEnterApprovedSociety(req.society_id)}
+                                  className="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] h-7 py-0"
+                                >
+                                  Enter Community Dashboard
+                                </Button>
+                              </div>
+                            )}
+
+                            {req.status === "REJECTED" && req.notes && (
+                              <div className="pt-1 border-t border-slate-800/60 text-[10px] text-slate-400">
+                                {req.notes}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 gap-2.5 pt-1">
                     {/* Path 1: Register New Society */}
                     <button
                       type="button"

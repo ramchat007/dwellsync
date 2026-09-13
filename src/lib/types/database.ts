@@ -64,6 +64,27 @@ export type FamilyRelationship = "SPOUSE" | "CHILD" | "PARENT" | "SIBLING" | "OT
 
 export type InvitationStatus = "PENDING" | "ACCEPTED" | "EXPIRED" | "REVOKED";
 
+export type AccessRequestStatus = "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
+export type AccessRequestRole = "OWNER" | "TENANT" | "RESIDENT";
+
+export interface SocietyAccessRequest {
+  id: string;
+  society_id: string;
+  user_id: string;
+  unit_id: string | null;
+  unit_number: string;
+  applicant_name: string | null;
+  applicant_phone: string | null;
+  applicant_email: string | null;
+  requested_role: AccessRequestRole;
+  status: AccessRequestStatus;
+  notes: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export type AuditAction =
   | "SUPER_ADMIN_LOGIN"
   | "SUPER_ADMIN_LOGOUT"
@@ -79,6 +100,10 @@ export type AuditAction =
   | "MEMBERSHIP_CREATED"
   | "MEMBERSHIP_UPDATED"
   | "MEMBERSHIP_REMOVED"
+  | "ACCESS_REQUEST_SUBMITTED"
+  | "ACCESS_REQUEST_APPROVED"
+  | "ACCESS_REQUEST_REJECTED"
+  | "ACCESS_REQUEST_CANCELLED"
   | "MEMBER_INVITED"
   | "MEMBER_CREATED"
   | "MEMBER_ROLE_CHANGED"

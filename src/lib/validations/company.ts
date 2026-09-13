@@ -87,3 +87,64 @@ export const UpdateStaffAssignmentSchema = z.object({
   end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format YYYY-MM-DD").optional().nullable(),
 });
 
+// Phase 16: Operations & Tasks Validations
+export const CompanyTaskCategoryEnum = z.enum([
+  "FACILITY",
+  "MAINTENANCE",
+  "HOUSEKEEPING",
+  "SECURITY",
+  "ELECTRICAL",
+  "PLUMBING",
+  "LIFT",
+  "FIRE_SAFETY",
+  "COMMON_AREA",
+  "VENDOR",
+  "INSPECTION",
+  "RESIDENT_FOLLOWUP",
+  "GENERAL",
+]);
+
+export const CompanyTaskPriorityEnum = z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]);
+
+export const CompanyTaskStatusEnum = z.enum(["OPEN", "IN_PROGRESS", "ON_HOLD", "COMPLETED", "CANCELLED"]);
+
+export const CreateCompanyTaskSchema = z.object({
+  society_id: z.string().uuid("Invalid society ID"),
+  title: z.string().min(3, "Title must be at least 3 characters").max(200, "Title cannot exceed 200 characters"),
+  description: z.string().max(2000, "Description cannot exceed 2000 characters").optional().nullable(),
+  category: CompanyTaskCategoryEnum.default("GENERAL"),
+  priority: CompanyTaskPriorityEnum.default("MEDIUM"),
+  status: CompanyTaskStatusEnum.default("OPEN"),
+  assigned_to: z.string().uuid("Invalid assignee ID").optional().nullable(),
+  due_at: z.string().datetime({ offset: true }).or(z.string().regex(/^\d{4}-\d{2}-\d{2}(T.*)?$/)).optional().nullable(),
+  metadata: z.record(z.unknown()).optional().default({}),
+});
+
+export const UpdateCompanyTaskSchema = z.object({
+  title: z.string().min(3).max(200).optional(),
+  description: z.string().max(2000).optional().nullable(),
+  category: CompanyTaskCategoryEnum.optional(),
+  priority: CompanyTaskPriorityEnum.optional(),
+  status: CompanyTaskStatusEnum.optional(),
+  assigned_to: z.string().uuid().optional().nullable(),
+  due_at: z.string().datetime({ offset: true }).or(z.string().regex(/^\d{4}-\d{2}-\d{2}(T.*)?$/)).optional().nullable(),
+  metadata: z.record(z.unknown()).optional().nullable(),
+});
+
+export const CompanyTaskQuerySchema = z.object({
+  society_id: z.string().uuid().optional(),
+  status: CompanyTaskStatusEnum.optional(),
+  priority: CompanyTaskPriorityEnum.optional(),
+  category: CompanyTaskCategoryEnum.optional(),
+  assigned_to: z.string().uuid().optional(),
+  search: z.string().max(100).optional(),
+  overdue_only: z.enum(["true", "false"]).optional(),
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().max(100).default(20),
+});
+
+export const CreateCompanyTaskCommentSchema = z.object({
+  comment: z.string().min(1, "Comment cannot be empty").max(1000, "Comment cannot exceed 1000 characters"),
+});
+
+

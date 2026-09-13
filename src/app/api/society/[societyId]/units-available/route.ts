@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getCurrentIdentity } from "@/lib/auth/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -8,6 +9,11 @@ export async function GET(
   { params }: { params: Promise<{ societyId: string }> }
 ) {
   try {
+    const identity = await getCurrentIdentity();
+    if (!identity || !identity.isAuthenticated) {
+      return NextResponse.json({ error: "Authentication required." }, { status: 401 });
+    }
+
     const { societyId } = await params;
     const adminClient = createAdminClient();
 
@@ -64,4 +70,3 @@ export async function GET(
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
-

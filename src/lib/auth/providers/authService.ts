@@ -253,8 +253,8 @@ export class AuthService {
     };
   }
 
-  async getGoogleOAuthUrl(redirectTo?: string) {
-    return this.googleProvider.getOAuthUrl(redirectTo);
+  async getGoogleOAuthUrl(redirectTo?: string, origin?: string) {
+    return this.googleProvider.getOAuthUrl(redirectTo, origin);
   }
 }
 

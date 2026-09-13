@@ -959,6 +959,8 @@ export class CompanyService {
       .eq("management_company_id", companyId)
       .eq("status", "ACTIVE");
 
+    const now = new Date().toISOString();
+
     if (accessibleSocietyIds.length === 0) {
       return {
         managedSocietiesCount: managedSocietiesCount || 0,
@@ -967,10 +969,17 @@ export class CompanyService {
         totalBuildingsCount: 0,
         totalUnitsCount: 0,
         totalActiveMembersCount: 0,
+        activeStaffCount: 0,
+        activePropertyManagersCount: 0,
         openComplaintsCount: 0,
+        pendingTasksCount: 0,
+        overdueTasksCount: 0,
+        completedTasksCount: 0,
         upcomingEventsCount: 0,
         pendingAccessRequestsCount: 0,
         upcomingMeetingsCount: 0,
+        recentActivity: [],
+        societySummaries: [],
       };
     }
 
@@ -983,6 +992,13 @@ export class CompanyService {
       { count: eventsCount },
       { count: accessRequestsCount },
       { count: meetingsCount },
+      { count: activeStaffCount },
+      { count: activePropertyManagersCount },
+      { count: pendingTasksCount },
+      { count: overdueTasksCount },
+      { count: completedTasksCount },
+      { data: recentAudits },
+      { data: allTasks },
     ] = await Promise.all([
       adminClient
         .from("buildings")
@@ -1007,7 +1023,7 @@ export class CompanyService {
         .from("events")
         .select("id", { count: "exact", head: true })
         .in("society_id", accessibleSocietyIds)
-        .gte("start_date", new Date().toISOString()),
+        .gte("start_date", now),
       adminClient
         .from("society_access_requests")
         .select("id", { count: "exact", head: true })
@@ -1018,7 +1034,88 @@ export class CompanyService {
         .select("id", { count: "exact", head: true })
         .in("society_id", accessibleSocietyIds)
         .eq("status", "SCHEDULED"),
+      adminClient
+        .from("management_company_staff_assignments")
+        .select("id", { count: "exact", head: true })
+        .eq("management_company_id", companyId)
+        .in("society_id", accessibleSocietyIds)
+        .eq("status", "ACTIVE"),
+      adminClient
+        .from("management_company_staff_assignments")
+        .select("id", { count: "exact", head: true })
+        .eq("management_company_id", companyId)
+        .in("society_id", accessibleSocietyIds)
+        .eq("assignment_type", "PROPERTY_MANAGER")
+        .eq("status", "ACTIVE"),
+      adminClient
+        .from("management_company_tasks")
+        .select("id", { count: "exact", head: true })
+        .eq("management_company_id", companyId)
+        .in("society_id", accessibleSocietyIds)
+        .in("status", ["OPEN", "IN_PROGRESS", "ON_HOLD"]),
+      adminClient
+        .from("management_company_tasks")
+        .select("id", { count: "exact", head: true })
+        .eq("management_company_id", companyId)
+        .in("society_id", accessibleSocietyIds)
+        .in("status", ["OPEN", "IN_PROGRESS", "ON_HOLD"])
+        .lt("due_at", now),
+      adminClient
+        .from("management_company_tasks")
+        .select("id", { count: "exact", head: true })
+        .eq("management_company_id", companyId)
+        .in("society_id", accessibleSocietyIds)
+        .eq("status", "COMPLETED"),
+      adminClient
+        .from("audit_logs")
+        .select(`
+          id,
+          action,
+          actor_user_id,
+          metadata,
+          created_at,
+          actor:profiles!audit_logs_actor_user_id_fkey(id, email, full_name)
+        `)
+        .eq("resource_type", "management_company_tasks")
+        .in("society_id", accessibleSocietyIds)
+        .order("created_at", { ascending: false })
+        .limit(10),
+      adminClient
+        .from("management_company_tasks")
+        .select("id, society_id, status, due_at")
+        .eq("management_company_id", companyId)
+        .in("society_id", accessibleSocietyIds),
     ]);
+
+    // Build society summaries
+    const tasksBySociety: Record<string, any[]> = {};
+    (allTasks || []).forEach((t: any) => {
+      if (!tasksBySociety[t.society_id]) tasksBySociety[t.society_id] = [];
+      tasksBySociety[t.society_id].push(t);
+    });
+
+    const societySummaries: any[] = accessibleSocieties.map((soc) => {
+      const sTasks = tasksBySociety[soc.society_id] || [];
+      const open = sTasks.filter((t) => t.status === "OPEN").length;
+      const inProg = sTasks.filter((t) => t.status === "IN_PROGRESS").length;
+      const completed = sTasks.filter((t) => t.status === "COMPLETED").length;
+      const overdue = sTasks.filter(
+        (t) => ["OPEN", "IN_PROGRESS", "ON_HOLD"].includes(t.status) && t.due_at && t.due_at < now
+      ).length;
+
+      return {
+        societyId: soc.society_id,
+        societyName: soc.society?.name || "Society",
+        societyCode: soc.society?.code || "SOC",
+        totalTasksCount: sTasks.length,
+        openTasksCount: open,
+        inProgressTasksCount: inProg,
+        overdueTasksCount: overdue,
+        completedTasksCount: completed,
+        activeStaffCount: 0,
+        openComplaintsCount: 0,
+      };
+    });
 
     return {
       managedSocietiesCount: managedSocietiesCount || 0,
@@ -1027,10 +1124,17 @@ export class CompanyService {
       totalBuildingsCount: buildingsCount || 0,
       totalUnitsCount: unitsCount || 0,
       totalActiveMembersCount: membersCount || 0,
+      activeStaffCount: activeStaffCount || 0,
+      activePropertyManagersCount: activePropertyManagersCount || 0,
       openComplaintsCount: complaintsCount || 0,
+      pendingTasksCount: pendingTasksCount || 0,
+      overdueTasksCount: overdueTasksCount || 0,
+      completedTasksCount: completedTasksCount || 0,
       upcomingEventsCount: eventsCount || 0,
       pendingAccessRequestsCount: accessRequestsCount || 0,
       upcomingMeetingsCount: meetingsCount || 0,
+      recentActivity: (recentAudits || []) as any[],
+      societySummaries,
     };
   }
 }
