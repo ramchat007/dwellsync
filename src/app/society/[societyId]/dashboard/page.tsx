@@ -1,8 +1,10 @@
 import React from "react";
 import Link from "next/link";
 import { requireSocietyAccess, roleHasPermission } from "@/lib/auth/server";
+import { isAuthorizedSocietyAdmin } from "@/lib/auth/societyAdmin";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { getSocietyMetrics } from "@/lib/services/societyService";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   Building2,
   Users,
@@ -17,6 +19,8 @@ import {
   UserPlus,
   Send,
   BarChart3,
+  UserCheck,
+  AlertCircle,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -33,6 +37,23 @@ export default async function SocietyDashboardPage({
   const { societyId } = await params;
   const { identity, society } = await requireSocietyAccess(societyId);
   const metrics = await getSocietyMetrics(societyId);
+
+  const isAdmin = isAuthorizedSocietyAdmin(identity, societyId);
+  let pendingRequestsCount = 0;
+
+  if (isAdmin) {
+    try {
+      const adminClient = createAdminClient();
+      const { count } = await adminClient
+        .from("society_access_requests")
+        .select("id", { count: "exact", head: true })
+        .eq("society_id", societyId)
+        .eq("status", "PENDING");
+      pendingRequestsCount = count || 0;
+    } catch (e) {
+      console.warn("[dashboard] Error fetching pending access requests count:", e);
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -62,6 +83,30 @@ export default async function SocietyDashboardPage({
         }
       />
 
+      {/* Pending Access Requests Attention Banner for Admins */}
+      {isAdmin && pendingRequestsCount > 0 && (
+        <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-amber-100 rounded-lg text-amber-700">
+              <AlertCircle className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-sm font-bold">
+                {pendingRequestsCount} Pending Society Access Request{pendingRequestsCount > 1 ? "s" : ""}
+              </div>
+              <p className="text-xs text-amber-700">
+                New residents or tenants are awaiting administrative verification and role assignment.
+              </p>
+            </div>
+          </div>
+          <Link href={`/society/${societyId}/access-requests`}>
+            <Button size="sm" className="bg-amber-600 hover:bg-amber-700 text-white text-xs gap-1.5 shadow-sm">
+              Review Requests <ArrowRight className="w-3.5 h-3.5" />
+            </Button>
+          </Link>
+        </div>
+      )}
+
       {/* Identity & Active Role Banner */}
       <div className="p-5 rounded-xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border border-slate-800">
         <div className="space-y-1">
@@ -90,44 +135,54 @@ export default async function SocietyDashboardPage({
               <Building2 className="w-4 h-4" />
             </div>
             <div>
-              <div className="text-xs font-bold text-slate-900 group-hover:text-indigo-700">Add Building</div>
-              <div className="text-[10px] text-slate-400">Towers & Wings</div>
+              <div className="text-xs font-bold text-slate-900 group-hover:text-indigo-700">Buildings & Units</div>
+              <div className="text-[10px] text-slate-400">Towers, Wings & Flats</div>
             </div>
           </div>
         </Link>
 
-        <Link href={`/society/${societyId}/buildings`}>
-          <div className="p-3.5 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/30 transition-all cursor-pointer shadow-2xs group flex items-center gap-3">
-            <div className="p-2 bg-cyan-50 text-cyan-700 group-hover:bg-cyan-600 group-hover:text-white rounded-lg transition-colors">
-              <Sparkles className="w-4 h-4" />
+        <Link href={`/society/${societyId}/members`}>
+          <div className="p-3.5 rounded-xl bg-white border border-slate-200 hover:border-emerald-400 hover:bg-emerald-50/30 transition-all cursor-pointer shadow-2xs group flex items-center gap-3">
+            <div className="p-2 bg-emerald-50 text-emerald-700 group-hover:bg-emerald-600 group-hover:text-white rounded-lg transition-colors">
+              <Users className="w-4 h-4" />
             </div>
             <div>
-              <div className="text-xs font-bold text-slate-900 group-hover:text-cyan-700">Generate Units</div>
-              <div className="text-[10px] text-slate-400">Bulk Creation</div>
+              <div className="text-xs font-bold text-slate-900 group-hover:text-emerald-700">Member Roster</div>
+              <div className="text-[10px] text-slate-400">Roles, Search & Roster</div>
+            </div>
+          </div>
+        </Link>
+
+        <Link href={`/society/${societyId}/access-requests`}>
+          <div className="p-3.5 rounded-xl bg-white border border-slate-200 hover:border-amber-400 hover:bg-amber-50/30 transition-all cursor-pointer shadow-2xs group flex items-center gap-3">
+            <div className="p-2 bg-amber-50 text-amber-700 group-hover:bg-amber-600 group-hover:text-white rounded-lg transition-colors relative">
+              <UserCheck className="w-4 h-4" />
+              {pendingRequestsCount > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500 text-[8px] font-bold text-white items-center justify-center">
+                    {pendingRequestsCount}
+                  </span>
+                </span>
+              )}
+            </div>
+            <div>
+              <div className="text-xs font-bold text-slate-900 group-hover:text-amber-700">Access Requests</div>
+              <div className="text-[10px] text-slate-400">
+                {pendingRequestsCount > 0 ? `${pendingRequestsCount} pending approval` : "No pending requests"}
+              </div>
             </div>
           </div>
         </Link>
 
         <Link href={`/society/${societyId}/people`}>
-          <div className="p-3.5 rounded-xl bg-white border border-slate-200 hover:border-emerald-400 hover:bg-emerald-50/30 transition-all cursor-pointer shadow-2xs group flex items-center gap-3">
-            <div className="p-2 bg-emerald-50 text-emerald-700 group-hover:bg-emerald-600 group-hover:text-white rounded-lg transition-colors">
+          <div className="p-3.5 rounded-xl bg-white border border-slate-200 hover:border-cyan-400 hover:bg-cyan-50/30 transition-all cursor-pointer shadow-2xs group flex items-center gap-3">
+            <div className="p-2 bg-cyan-50 text-cyan-700 group-hover:bg-cyan-600 group-hover:text-white rounded-lg transition-colors">
               <UserPlus className="w-4 h-4" />
             </div>
             <div>
-              <div className="text-xs font-bold text-slate-900 group-hover:text-emerald-700">Add Person</div>
-              <div className="text-[10px] text-slate-400">Resident / Staff</div>
-            </div>
-          </div>
-        </Link>
-
-        <Link href={`/society/${societyId}/people`}>
-          <div className="p-3.5 rounded-xl bg-white border border-slate-200 hover:border-amber-400 hover:bg-amber-50/30 transition-all cursor-pointer shadow-2xs group flex items-center gap-3">
-            <div className="p-2 bg-amber-50 text-amber-700 group-hover:bg-amber-600 group-hover:text-white rounded-lg transition-colors">
-              <Send className="w-4 h-4" />
-            </div>
-            <div>
-              <div className="text-xs font-bold text-slate-900 group-hover:text-amber-700">Invite Resident</div>
-              <div className="text-[10px] text-slate-400">Token Invitation</div>
+              <div className="text-xs font-bold text-slate-900 group-hover:text-cyan-700">Directory & Invites</div>
+              <div className="text-[10px] text-slate-400">Contact Book & Passes</div>
             </div>
           </div>
         </Link>
@@ -165,18 +220,22 @@ export default async function SocietyDashboardPage({
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-semibold text-slate-500 uppercase">
-              Active Members
-            </CardTitle>
-            <Users className="w-4 h-4 text-emerald-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-slate-900">{metrics.totalMembers}</div>
-            <p className="text-xs text-slate-500 mt-1">Residents, owners & staff</p>
-          </CardContent>
-        </Card>
+        <Link href={`/society/${societyId}/members`}>
+          <Card className="hover:border-emerald-300 transition-colors cursor-pointer">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-xs font-semibold text-slate-500 uppercase">
+                Active Members
+              </CardTitle>
+              <Users className="w-4 h-4 text-emerald-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-slate-900">{metrics.totalMembers}</div>
+              <p className="text-xs text-emerald-600 font-medium mt-1 flex items-center gap-1">
+                View Members Roster <ArrowRight className="w-3 h-3" />
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">

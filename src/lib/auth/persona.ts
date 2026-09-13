@@ -190,6 +190,8 @@ export function getNavigationForRole(
       { label: "Resolutions", href: `/society/${sid}/resolutions`, iconName: "FileCheck2" },
       { label: "Buildings & Wings", href: `/society/${sid}/buildings`, iconName: "Building2" },
       { label: "Units & Flats", href: `/society/${sid}/units`, iconName: "DoorOpen" },
+      { label: "Members Roster", href: `/society/${sid}/members`, iconName: "Users" },
+      { label: "Access Requests", href: `/society/${sid}/access-requests`, iconName: "UserCheck" },
       { label: "People Directory", href: `/society/${sid}/people`, iconName: "Users" },
       { label: "Complaints & Helpdesk", href: `/society/${sid}/complaints`, iconName: "MessageSquare" },
       { label: "Billing & Invoices", href: `/society/${sid}/billing`, iconName: "Receipt" },

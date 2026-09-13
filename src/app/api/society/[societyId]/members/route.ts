@@ -1,7 +1,16 @@
 import { NextResponse } from "next/server";
 import { requireSocietyAccess } from "@/lib/auth/server";
-import { getSocietyMembers, assignMembership } from "@/lib/services/membershipService";
+import {
+  isAuthorizedSocietyAdmin,
+  canManageRoles,
+  validateMemberQuery,
+  ALLOWED_ASSIGNABLE_ROLES,
+} from "@/lib/auth/societyAdmin";
+import { assignMembership } from "@/lib/services/membershipService";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { RoleId } from "@/lib/types/database";
+
+export const dynamic = "force-dynamic";
 
 export async function GET(
   req: Request,
@@ -9,13 +18,153 @@ export async function GET(
 ) {
   try {
     const { societyId } = await params;
-    await requireSocietyAccess(societyId);
+    const { identity } = await requireSocietyAccess(societyId);
 
-    const members = await getSocietyMembers(societyId);
-    return NextResponse.json({ success: true, data: members });
-  } catch (error) {
-    console.error("[members GET] Error:", error);
-    return NextResponse.json({ error: "Failed to fetch members" }, { status: 500 });
+    // 1. Authorization: Only authorized society administrators
+    if (!isAuthorizedSocietyAdmin(identity, societyId)) {
+      return NextResponse.json(
+        { error: "Unauthorized: Society administrative privileges required to view members roster." },
+        { status: 403 }
+      );
+    }
+
+    const { searchParams } = new URL(req.url);
+    const rawPage = searchParams.get("page");
+    const rawPageSize = searchParams.get("pageSize");
+    const rawSearch = searchParams.get("search");
+    const rawRole = searchParams.get("role");
+    const rawStatus = searchParams.get("status");
+    const rawUnit = searchParams.get("unitNumber");
+
+    const validation = validateMemberQuery({
+      identity,
+      targetSocietyId: societyId,
+      page: rawPage,
+      pageSize: rawPageSize,
+      search: rawSearch,
+      role: rawRole,
+      status: rawStatus,
+      unitNumber: rawUnit,
+    });
+
+    if (!validation.isValid || !validation.query) {
+      return NextResponse.json(
+        { error: validation.error || "Invalid query parameters" },
+        { status: validation.statusCode }
+      );
+    }
+
+    const { page, pageSize, search, role, status, unitNumber } = validation.query;
+    const adminClient = createAdminClient();
+
+    let query = adminClient
+      .from("society_memberships")
+      .select(
+        `
+        id,
+        society_id,
+        user_id,
+        role_id,
+        unit_number,
+        status,
+        joined_at,
+        left_at,
+        created_at,
+        updated_at,
+        profile:profiles!user_id (
+          id,
+          email,
+          full_name,
+          display_name,
+          phone,
+          avatar_url
+        )
+      `,
+        { count: "exact" }
+      )
+      .eq("society_id", societyId);
+
+    if (status) {
+      query = query.eq("status", status);
+    }
+
+    if (role) {
+      query = query.eq("role_id", role);
+    }
+
+    if (unitNumber) {
+      query = query.ilike("unit_number", `%${unitNumber}%`);
+    }
+
+    query = query.order("created_at", { ascending: false });
+
+    if (search) {
+      // Execute query and filter across profile fields and unit number in memory for exact search
+      const { data: allMembers, error: fetchErr } = await query;
+      if (fetchErr) {
+        console.error("[members GET] Search query error:", fetchErr);
+        return NextResponse.json({ error: "Failed to fetch members" }, { status: 500 });
+      }
+
+      const searchLower = search.toLowerCase();
+      const filtered = (allMembers || []).filter((m: any) => {
+        const profile = m.profile || {};
+        const nameMatch =
+          (profile.full_name || "").toLowerCase().includes(searchLower) ||
+          (profile.display_name || "").toLowerCase().includes(searchLower);
+        const emailMatch = (profile.email || "").toLowerCase().includes(searchLower);
+        const phoneMatch = (profile.phone || "").toLowerCase().includes(searchLower);
+        const unitMatch = (m.unit_number || "").toLowerCase().includes(searchLower);
+        const roleMatch = (m.role_id || "").toLowerCase().includes(searchLower);
+        return nameMatch || emailMatch || phoneMatch || unitMatch || roleMatch;
+      });
+
+      const total = filtered.length;
+      const totalPages = Math.max(1, Math.ceil(total / pageSize));
+      const from = (page - 1) * pageSize;
+      const paginatedData = filtered.slice(from, from + pageSize);
+
+      return NextResponse.json({
+        success: true,
+        data: paginatedData,
+        pagination: {
+          page,
+          pageSize,
+          total,
+          totalPages,
+        },
+      });
+    } else {
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      const { data: members, count, error: fetchErr } = await query.range(from, to);
+
+      if (fetchErr) {
+        console.error("[members GET] Paginated query error:", fetchErr);
+        return NextResponse.json({ error: "Failed to fetch members" }, { status: 500 });
+      }
+
+      const total = count || 0;
+      const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+      return NextResponse.json({
+        success: true,
+        data: members || [],
+        pagination: {
+          page,
+          pageSize,
+          total,
+          totalPages,
+        },
+      });
+    }
+  } catch (err: any) {
+    if (err?.digest?.startsWith?.("NEXT_REDIRECT") || err?.message === "NEXT_REDIRECT") {
+      return NextResponse.json({ error: "Unauthorized access to society" }, { status: 403 });
+    }
+    console.error("[members GET] Exception:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
@@ -27,6 +176,14 @@ export async function POST(
     const { societyId } = await params;
     const { identity } = await requireSocietyAccess(societyId);
 
+    // 1. Authorization: Only authorized role managers
+    if (!canManageRoles(identity, societyId)) {
+      return NextResponse.json(
+        { error: "Forbidden: Administrator authorization required to add members." },
+        { status: 403 }
+      );
+    }
+
     const body = await req.json();
     const { email, full_name, role_id, unit_number } = body;
 
@@ -35,12 +192,22 @@ export async function POST(
     }
 
     if (role_id === "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Cannot assign SUPER_ADMIN platform role" }, { status: 403 });
+      return NextResponse.json(
+        { error: "Cannot assign SUPER_ADMIN platform role" },
+        { status: 403 }
+      );
+    }
+
+    if (!ALLOWED_ASSIGNABLE_ROLES.includes(role_id as RoleId)) {
+      return NextResponse.json(
+        { error: `Invalid role '${role_id}'. Allowed roles: ${ALLOWED_ASSIGNABLE_ROLES.join(", ")}` },
+        { status: 400 }
+      );
     }
 
     const adminClient = createAdminClient();
 
-    // 1. Find or create user
+    // 2. Find or create user
     const { data: existingUsers } = await adminClient.auth.admin.listUsers();
     let targetUserId = (existingUsers?.users || []).find(
       (u) => u.email?.toLowerCase() === email.toLowerCase()
@@ -55,12 +222,15 @@ export async function POST(
       });
 
       if (createError || !newUser.user) {
-        return NextResponse.json({ error: createError?.message || "Failed to create user" }, { status: 500 });
+        return NextResponse.json(
+          { error: createError?.message || "Failed to create user" },
+          { status: 500 }
+        );
       }
       targetUserId = newUser.user.id;
     }
 
-    // 2. Ensure profile exists
+    // 3. Ensure profile exists
     await adminClient.from("profiles").upsert(
       {
         id: targetUserId,
@@ -72,7 +242,7 @@ export async function POST(
       { onConflict: "id" }
     );
 
-    // 3. Assign membership
+    // 4. Assign membership
     const result = await assignMembership(
       {
         society_id: societyId,
@@ -89,9 +259,11 @@ export async function POST(
     }
 
     return NextResponse.json(result);
-  } catch (error) {
-    console.error("[members POST] Error:", error);
+  } catch (err: any) {
+    if (err?.digest?.startsWith?.("NEXT_REDIRECT") || err?.message === "NEXT_REDIRECT") {
+      return NextResponse.json({ error: "Unauthorized access to society" }, { status: 403 });
+    }
+    console.error("[members POST] Error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
-

@@ -1,10 +1,78 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireSocietyAccess } from "@/lib/auth/server";
+import {
+  isAuthorizedSocietyAdmin,
+  canManageRoles,
+  validateRoleChange,
+  validateMemberRemoval,
+} from "@/lib/auth/societyAdmin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { recordAuditLog } from "@/lib/auth/audit";
-import { UpdateMemberRoleSchema } from "@/lib/validations/governance";
 
 export const dynamic = "force-dynamic";
+
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ societyId: string; memberId: string }> }
+) {
+  try {
+    const { societyId, memberId } = await params;
+    const { identity } = await requireSocietyAccess(societyId);
+
+    if (!isAuthorizedSocietyAdmin(identity, societyId)) {
+      return NextResponse.json(
+        { error: "Unauthorized: Society administrative privileges required." },
+        { status: 403 }
+      );
+    }
+
+    const adminClient = createAdminClient();
+    const { data: member, error } = await adminClient
+      .from("society_memberships")
+      .select(`
+        id,
+        user_id,
+        society_id,
+        role_id,
+        unit_number,
+        status,
+        joined_at,
+        left_at,
+        created_at,
+        updated_at,
+        profile:profiles!user_id (
+          id,
+          full_name,
+          display_name,
+          email,
+          phone,
+          avatar_url,
+          created_at
+        )
+      `)
+      .eq("id", memberId)
+      .eq("society_id", societyId)
+      .maybeSingle();
+
+    if (error || !member) {
+      return NextResponse.json(
+        { error: "Member not found in this society." },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      member,
+    });
+  } catch (err: any) {
+    if (err?.digest?.startsWith?.("NEXT_REDIRECT") || err?.message === "NEXT_REDIRECT") {
+      return NextResponse.json({ error: "Unauthorized access to society" }, { status: 403 });
+    }
+    console.error("[member GET] Exception:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
 
 export async function PATCH(
   req: NextRequest,
@@ -14,32 +82,9 @@ export async function PATCH(
     const { societyId, memberId } = await params;
     const { identity } = await requireSocietyAccess(societyId);
 
-    // 1. Authorization: Only Society Admin, Secretary, or Super Admin can modify member roles
-    const canManageRoles =
-      (identity.currentRole ? ["SUPER_ADMIN", "SOCIETY_ADMIN", "SECRETARY"].includes(identity.currentRole) : false) ||
-      identity.isSuperAdmin;
-
-    if (!canManageRoles) {
-      return NextResponse.json(
-        { error: "Forbidden: Management authorization required to manage member roles." },
-        { status: 403 }
-      );
-    }
-
-    const body = await req.json();
-    const parseResult = UpdateMemberRoleSchema.safeParse(body);
-
-    if (!parseResult.success) {
-      return NextResponse.json(
-        { error: "Invalid role update format", details: parseResult.error.flatten() },
-        { status: 400 }
-      );
-    }
-
-    const { role_id, unit_number, status } = parseResult.data;
     const adminClient = createAdminClient();
 
-    // 2. Fetch existing membership
+    // 1. Fetch existing membership
     const { data: targetMember, error: fetchErr } = await adminClient
       .from("society_memberships")
       .select("id, user_id, society_id, role_id, unit_number, status")
@@ -51,30 +96,37 @@ export async function PATCH(
       return NextResponse.json({ error: "Member not found in this society." }, { status: 404 });
     }
 
-    // 3. Prevent self-elevation / privilege manipulation
-    const callerUserId = identity.effectiveUser.id;
-    if (callerUserId === targetMember.user_id && role_id !== targetMember.role_id) {
+    const body = await req.json();
+    const { role_id, unit_number, status } = body;
+
+    // 2. Validate role & status modification using centralized validator
+    const validation = validateRoleChange({
+      identity,
+      targetSocietyId: societyId,
+      targetMember,
+      newRole: role_id,
+      newStatus: status,
+    });
+
+    if (!validation.isValid) {
       return NextResponse.json(
-        { error: "Privilege Escalation Prevention: You cannot modify your own assigned role." },
-        { status: 403 }
+        { error: validation.error },
+        { status: validation.statusCode }
       );
     }
 
-    // 4. Invariant: SUPER_ADMIN platform role cannot be assigned inside society scopes
-    if ((role_id as string) === "SUPER_ADMIN") {
-      return NextResponse.json(
-        { error: "Invalid operation: SUPER_ADMIN is a platform role and cannot be assigned in a society." },
-        { status: 403 }
-      );
-    }
-
-    // 5. Update membership
+    // 3. Update membership
     const updates: Record<string, any> = {
-      role_id,
       updated_at: new Date().toISOString(),
     };
+    if (role_id) updates.role_id = role_id;
     if (unit_number !== undefined) updates.unit_number = unit_number;
-    if (status !== undefined) updates.status = status;
+    if (status !== undefined) {
+      updates.status = status;
+      if (status === "REMOVED") {
+        updates.left_at = new Date().toISOString();
+      }
+    }
 
     const { data: updated, error: updateErr } = await adminClient
       .from("society_memberships")
@@ -88,8 +140,16 @@ export async function PATCH(
         role_id,
         unit_number,
         status,
+        joined_at,
+        left_at,
         updated_at,
-        profile:profiles!user_id(id, full_name, display_name, email, phone)
+        profile:profiles!user_id (
+          id,
+          full_name,
+          display_name,
+          email,
+          phone
+        )
       `)
       .single();
 
@@ -97,19 +157,21 @@ export async function PATCH(
       return NextResponse.json({ error: updateErr?.message || "Failed to update member" }, { status: 500 });
     }
 
-    // 6. Immutable Audit Log
+    // 4. Immutable Audit Log
+    const callerUserId = identity.effectiveUser.id;
     await recordAuditLog({
       actorUserId: callerUserId,
       societyId,
-      action: "MEMBER_ROLE_CHANGED",
+      action: status && status !== targetMember.status ? "MEMBER_STATUS_CHANGED" : "MEMBER_ROLE_CHANGED",
       resourceType: "society_memberships",
       resourceId: memberId,
       metadata: {
         targetUserId: targetMember.user_id,
         previousRole: targetMember.role_id,
-        newRole: role_id,
+        newRole: role_id || targetMember.role_id,
         previousStatus: targetMember.status,
         newStatus: status || targetMember.status,
+        unit_number: unit_number !== undefined ? unit_number : targetMember.unit_number,
       },
     });
 
@@ -118,8 +180,11 @@ export async function PATCH(
       member: updated,
     });
   } catch (err: any) {
+    if (err?.digest?.startsWith?.("NEXT_REDIRECT") || err?.message === "NEXT_REDIRECT") {
+      return NextResponse.json({ error: "Unauthorized access to society" }, { status: 403 });
+    }
     console.error("[member PATCH] Exception:", err);
-    return NextResponse.json({ error: "Unauthorized or server error" }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
@@ -131,42 +196,35 @@ export async function DELETE(
     const { societyId, memberId } = await params;
     const { identity } = await requireSocietyAccess(societyId);
 
-    const canManageRoles =
-      (identity.currentRole ? ["SUPER_ADMIN", "SOCIETY_ADMIN", "SECRETARY"].includes(identity.currentRole) : false) ||
-      identity.isSuperAdmin;
-
-    if (!canManageRoles) {
-      return NextResponse.json(
-        { error: "Forbidden: Administrator authorization required to remove members." },
-        { status: 403 }
-      );
-    }
-
     const adminClient = createAdminClient();
 
     const { data: targetMember } = await adminClient
       .from("society_memberships")
-      .select("id, user_id, role_id")
+      .select("id, user_id, society_id, role_id, status")
       .eq("id", memberId)
       .eq("society_id", societyId)
       .maybeSingle();
 
-    if (!targetMember) {
-      return NextResponse.json({ error: "Member not found" }, { status: 404 });
-    }
+    // Validate removal using centralized validator
+    const validation = validateMemberRemoval({
+      identity,
+      targetSocietyId: societyId,
+      targetMember,
+    });
 
-    if (targetMember.user_id === identity.effectiveUser.id) {
+    if (!validation.isValid) {
       return NextResponse.json(
-        { error: "Invalid action: Administrators cannot delete their own society membership." },
-        { status: 400 }
+        { error: validation.error },
+        { status: validation.statusCode }
       );
     }
 
-    // Soft-delete or update status to TERMINATED
+    // Soft-delete: update status to REMOVED (matching database check constraint)
     const { error: updateErr } = await adminClient
       .from("society_memberships")
       .update({
-        status: "TERMINATED",
+        status: "REMOVED",
+        left_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
       .eq("id", memberId)
@@ -183,14 +241,17 @@ export async function DELETE(
       resourceType: "society_memberships",
       resourceId: memberId,
       metadata: {
-        targetUserId: targetMember.user_id,
-        role: targetMember.role_id,
+        targetUserId: targetMember?.user_id,
+        role: targetMember?.role_id,
       },
     });
 
-    return NextResponse.json({ success: true, message: "Membership terminated successfully." });
+    return NextResponse.json({ success: true, message: "Membership removed successfully." });
   } catch (err: any) {
+    if (err?.digest?.startsWith?.("NEXT_REDIRECT") || err?.message === "NEXT_REDIRECT") {
+      return NextResponse.json({ error: "Unauthorized access to society" }, { status: 403 });
+    }
     console.error("[member DELETE] Exception:", err);
-    return NextResponse.json({ error: "Unauthorized or server error" }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
