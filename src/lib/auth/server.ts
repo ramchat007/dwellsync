@@ -8,6 +8,7 @@ import { getPermissionsForRole, roleHasPermission, getPermissionsForCompanyRole,
 import { UserIdentity } from "../types/auth";
 import { Profile, RoleId, Society, SocietyMembership } from "../types/database";
 import { ManagementCompany, ManagementCompanyMember, CompanyRole } from "../types/company";
+import { isAuthorizedSocietyAdmin } from "./societyAdmin";
 
 export { roleHasPermission, getPermissionsForRole, companyRoleHasPermission, getPermissionsForCompanyRole };
 
@@ -493,3 +494,20 @@ export async function getCurrentSociety(): Promise<Society | null> {
 export async function getEffectiveIdentity(): Promise<UserIdentity | null> {
   return getCurrentIdentity();
 }
+
+/**
+ * Server component / route helper that enforces society administrator access.
+ * Redirects to /unauthorized if caller is not an authorized society admin.
+ */
+export async function requireSocietyAdmin(
+  societyId: string
+): Promise<{ identity: UserIdentity; society: Society }> {
+  const { identity, society } = await requireSocietyAccess(societyId);
+
+  if (!isAuthorizedSocietyAdmin(identity, societyId)) {
+    redirect("/unauthorized");
+  }
+
+  return { identity, society };
+}
+

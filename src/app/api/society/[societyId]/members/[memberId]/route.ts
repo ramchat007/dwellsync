@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireSocietyAccess } from "@/lib/auth/server";
+import { getCurrentIdentity } from "@/lib/auth/server";
 import {
   isAuthorizedSocietyAdmin,
   canManageRoles,
@@ -17,7 +17,14 @@ export async function GET(
 ) {
   try {
     const { societyId, memberId } = await params;
-    const { identity } = await requireSocietyAccess(societyId);
+    const identity = await getCurrentIdentity();
+
+    if (!identity || !identity.isAuthenticated) {
+      return NextResponse.json(
+        { error: "Authentication required." },
+        { status: 401 }
+      );
+    }
 
     if (!isAuthorizedSocietyAdmin(identity, societyId)) {
       return NextResponse.json(
@@ -36,8 +43,6 @@ export async function GET(
         role_id,
         unit_number,
         status,
-        joined_at,
-        left_at,
         created_at,
         updated_at,
         profile:profiles!user_id (
@@ -80,7 +85,21 @@ export async function PATCH(
 ) {
   try {
     const { societyId, memberId } = await params;
-    const { identity } = await requireSocietyAccess(societyId);
+    const identity = await getCurrentIdentity();
+
+    if (!identity || !identity.isAuthenticated) {
+      return NextResponse.json(
+        { error: "Authentication required." },
+        { status: 401 }
+      );
+    }
+
+    if (!canManageRoles(identity, societyId)) {
+      return NextResponse.json(
+        { error: "Forbidden: Administrator privileges required to manage roles." },
+        { status: 403 }
+      );
+    }
 
     const adminClient = createAdminClient();
 
@@ -96,8 +115,9 @@ export async function PATCH(
       return NextResponse.json({ error: "Member not found in this society." }, { status: 404 });
     }
 
-    const body = await req.json();
-    const { role_id, unit_number, status } = body;
+    const body = await req.json().catch(() => ({}));
+    const role_id = body.role_id || body.role;
+    const { unit_number, status } = body;
 
     // 2. Validate role & status modification using centralized validator
     const validation = validateRoleChange({
@@ -123,9 +143,6 @@ export async function PATCH(
     if (unit_number !== undefined) updates.unit_number = unit_number;
     if (status !== undefined) {
       updates.status = status;
-      if (status === "REMOVED") {
-        updates.left_at = new Date().toISOString();
-      }
     }
 
     const { data: updated, error: updateErr } = await adminClient
@@ -140,8 +157,7 @@ export async function PATCH(
         role_id,
         unit_number,
         status,
-        joined_at,
-        left_at,
+        created_at,
         updated_at,
         profile:profiles!user_id (
           id,
@@ -162,7 +178,14 @@ export async function PATCH(
     await recordAuditLog({
       actorUserId: callerUserId,
       societyId,
-      action: status && status !== targetMember.status ? "MEMBER_STATUS_CHANGED" : "MEMBER_ROLE_CHANGED",
+      action:
+        status && status !== targetMember.status
+          ? "MEMBER_STATUS_CHANGED"
+          : role_id && role_id !== targetMember.role_id
+          ? "MEMBER_ROLE_CHANGED"
+          : unit_number !== undefined && unit_number !== targetMember.unit_number
+          ? "MEMBER_UNIT_REASSIGNED"
+          : "MEMBERSHIP_UPDATED",
       resourceType: "society_memberships",
       resourceId: memberId,
       metadata: {
@@ -194,7 +217,21 @@ export async function DELETE(
 ) {
   try {
     const { societyId, memberId } = await params;
-    const { identity } = await requireSocietyAccess(societyId);
+    const identity = await getCurrentIdentity();
+
+    if (!identity || !identity.isAuthenticated) {
+      return NextResponse.json(
+        { error: "Authentication required." },
+        { status: 401 }
+      );
+    }
+
+    if (!canManageRoles(identity, societyId)) {
+      return NextResponse.json(
+        { error: "Forbidden: Administrator authorization required to remove members." },
+        { status: 403 }
+      );
+    }
 
     const adminClient = createAdminClient();
 
@@ -224,7 +261,6 @@ export async function DELETE(
       .from("society_memberships")
       .update({
         status: "REMOVED",
-        left_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
       .eq("id", memberId)

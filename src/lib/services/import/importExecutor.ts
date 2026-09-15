@@ -414,7 +414,6 @@ export async function executeImportCommit({
                 role_id: roleId,
                 unit_number: unitNumber,
                 status: "ACTIVE",
-                joined_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
               },
               { onConflict: "society_id,user_id,role_id" }
@@ -462,7 +461,6 @@ export async function executeImportCommit({
                 role_id: "OWNER",
                 unit_number: unitNumber,
                 status: "ACTIVE",
-                joined_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
               },
               { onConflict: "society_id,user_id,role_id" }
@@ -500,7 +498,6 @@ export async function executeImportCommit({
                 role_id: "TENANT",
                 unit_number: unitNumber,
                 status: "ACTIVE",
-                joined_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
               },
               { onConflict: "society_id,user_id,role_id" }
@@ -617,7 +614,6 @@ export async function executeImportCommit({
                 role_id: "OWNER",
                 unit_number: unitNumber,
                 status: "ACTIVE",
-                joined_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
               },
               { onConflict: "society_id,user_id,role_id" }

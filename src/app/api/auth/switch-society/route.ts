@@ -15,8 +15,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Society ID is required" }, { status: 400 });
     }
 
-    // Verify membership or superadmin (while not impersonating)
-    if (!identity.isSuperAdmin || identity.isImpersonating) {
+    // 1. Impersonation Locking: Impersonated users cannot switch society
+    if (identity.isImpersonating) {
+      return NextResponse.json(
+        { error: "Forbidden: Impersonated personas are strictly locked to their target society." },
+        { status: 403 }
+      );
+    }
+
+    // Verify membership or superadmin
+    if (!identity.isSuperAdmin) {
       const adminClient = createAdminClient();
       const { data: membership } = await adminClient
         .from("society_memberships")

@@ -84,13 +84,19 @@ export async function addUnitOwner(
   }
 
   // 3. Ensure user has OWNER society membership
+  const { data: unitRecord } = await adminClient
+    .from("units")
+    .select("unit_number")
+    .eq("id", data.unit_id)
+    .single();
+
   await adminClient.from("society_memberships").upsert(
     {
       society_id: data.society_id,
       user_id: data.user_id,
       role_id: "OWNER",
       status: "ACTIVE",
-      joined_at: new Date().toISOString(),
+      unit_number: unitRecord?.unit_number || null,
       updated_at: new Date().toISOString(),
     },
     { onConflict: "society_id,user_id,role_id" }
@@ -217,13 +223,19 @@ export async function addUnitOccupancy(
 
   // 3. Assign TENANT or RESIDENT membership
   const targetRole = data.occupancy_type === "TENANT_OCCUPIED" ? "TENANT" : "RESIDENT";
+  const { data: unitRecord } = await adminClient
+    .from("units")
+    .select("unit_number")
+    .eq("id", data.unit_id)
+    .single();
+
   await adminClient.from("society_memberships").upsert(
     {
       society_id: data.society_id,
       user_id: data.user_id,
       role_id: targetRole,
       status: "ACTIVE",
-      joined_at: new Date().toISOString(),
+      unit_number: unitRecord?.unit_number || null,
       updated_at: new Date().toISOString(),
     },
     { onConflict: "society_id,user_id,role_id" }

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { requireSocietyAccess } from "@/lib/auth/server";
+import { getCurrentIdentity } from "@/lib/auth/server";
+import { isAuthorizedSocietyAdmin } from "@/lib/auth/societyAdmin";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -10,14 +11,17 @@ export async function GET(
 ) {
   try {
     const { societyId } = await params;
-    const { identity } = await requireSocietyAccess(societyId);
+    const identity = await getCurrentIdentity();
 
-    // Administrative Role Enforcement: Only Super Admins and Society Admins/Secretaries/Managers
-    const isAuthorizedAdmin =
-      identity.isSuperAdmin ||
-      ["SOCIETY_ADMIN", "SECRETARY", "MANAGER"].includes(identity.currentRole || "");
+    if (!identity || !identity.isAuthenticated) {
+      return NextResponse.json(
+        { error: "Authentication required." },
+        { status: 401 }
+      );
+    }
 
-    if (!isAuthorizedAdmin) {
+    // Administrative Role Enforcement: Only authorized society administrators
+    if (!isAuthorizedSocietyAdmin(identity, societyId)) {
       return NextResponse.json(
         { error: "Unauthorized. Society administrative privileges required to view access requests." },
         { status: 403 }

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireSocietyAccess } from "@/lib/auth/server";
+import { getCurrentIdentity } from "@/lib/auth/server";
 import {
   isAuthorizedSocietyAdmin,
   canManageRoles,
@@ -18,7 +18,14 @@ export async function GET(
 ) {
   try {
     const { societyId } = await params;
-    const { identity } = await requireSocietyAccess(societyId);
+    const identity = await getCurrentIdentity();
+
+    if (!identity || !identity.isAuthenticated) {
+      return NextResponse.json(
+        { error: "Authentication required." },
+        { status: 401 }
+      );
+    }
 
     // 1. Authorization: Only authorized society administrators
     if (!isAuthorizedSocietyAdmin(identity, societyId)) {
@@ -35,6 +42,9 @@ export async function GET(
     const rawRole = searchParams.get("role");
     const rawStatus = searchParams.get("status");
     const rawUnit = searchParams.get("unitNumber");
+    const rawBuildingId = searchParams.get("buildingId");
+    const rawWingId = searchParams.get("wingId");
+    const rawUnitId = searchParams.get("unitId");
 
     const validation = validateMemberQuery({
       identity,
@@ -45,6 +55,9 @@ export async function GET(
       role: rawRole,
       status: rawStatus,
       unitNumber: rawUnit,
+      buildingId: rawBuildingId,
+      wingId: rawWingId,
+      unitId: rawUnitId,
     });
 
     if (!validation.isValid || !validation.query) {
@@ -54,7 +67,17 @@ export async function GET(
       );
     }
 
-    const { page, pageSize, search, role, status, unitNumber } = validation.query;
+    const {
+      page,
+      pageSize,
+      search,
+      role,
+      status,
+      unitNumber,
+      buildingId,
+      wingId,
+      unitId,
+    } = validation.query;
     const adminClient = createAdminClient();
 
     let query = adminClient
@@ -67,8 +90,6 @@ export async function GET(
         role_id,
         unit_number,
         status,
-        joined_at,
-        left_at,
         created_at,
         updated_at,
         profile:profiles!user_id (
@@ -94,6 +115,50 @@ export async function GET(
 
     if (unitNumber) {
       query = query.ilike("unit_number", `%${unitNumber}%`);
+    }
+
+    if (unitId) {
+      const { data: targetUnit } = await adminClient
+        .from("units")
+        .select("unit_number")
+        .eq("id", unitId)
+        .eq("society_id", societyId)
+        .maybeSingle();
+
+      if (!targetUnit) {
+        return NextResponse.json({
+          success: true,
+          data: [],
+          pagination: { page, pageSize, total: 0, totalPages: 1 },
+        });
+      }
+      query = query.eq("unit_number", targetUnit.unit_number);
+    } else if (buildingId || wingId) {
+      let unitQuery = adminClient
+        .from("units")
+        .select("unit_number")
+        .eq("society_id", societyId);
+
+      if (buildingId) {
+        unitQuery = unitQuery.eq("building_id", buildingId);
+      }
+      if (wingId) {
+        unitQuery = unitQuery.eq("wing_id", wingId);
+      }
+
+      const { data: matchingUnits, error: unitErr } = await unitQuery;
+      if (unitErr) {
+        console.error("[members GET] Unit lookup error:", unitErr);
+      }
+      const unitNumbers = (matchingUnits || []).map((u: any) => u.unit_number).filter(Boolean);
+      if (unitNumbers.length === 0) {
+        return NextResponse.json({
+          success: true,
+          data: [],
+          pagination: { page, pageSize, total: 0, totalPages: 1 },
+        });
+      }
+      query = query.in("unit_number", unitNumbers);
     }
 
     query = query.order("created_at", { ascending: false });
@@ -174,7 +239,14 @@ export async function POST(
 ) {
   try {
     const { societyId } = await params;
-    const { identity } = await requireSocietyAccess(societyId);
+    const identity = await getCurrentIdentity();
+
+    if (!identity || !identity.isAuthenticated) {
+      return NextResponse.json(
+        { error: "Authentication required." },
+        { status: 401 }
+      );
+    }
 
     // 1. Authorization: Only authorized role managers
     if (!canManageRoles(identity, societyId)) {

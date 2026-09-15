@@ -1,7 +1,5 @@
-import { redirect } from "next/navigation";
-import { RoleId, MembershipStatus, Society } from "../types/database";
+import { RoleId, MembershipStatus } from "../types/database";
 import { UserIdentity } from "../types/auth";
-import { requireSocietyAccess } from "./server";
 
 export const ALLOWED_ASSIGNABLE_ROLES: RoleId[] = [
   "SOCIETY_ADMIN",
@@ -248,6 +246,8 @@ export function validateMemberRemoval(params: ValidateMemberRemovalParams): Vali
   return { isValid: true, statusCode: 200 };
 }
 
+export const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export interface ValidateMemberQueryParams {
   identity: UserIdentity | null;
   targetSocietyId: string;
@@ -257,6 +257,9 @@ export interface ValidateMemberQueryParams {
   role?: string | null;
   status?: string | null;
   unitNumber?: string | null;
+  buildingId?: string | null;
+  wingId?: string | null;
+  unitId?: string | null;
 }
 
 export interface SanitizedMemberQueryParams {
@@ -266,6 +269,9 @@ export interface SanitizedMemberQueryParams {
   role?: RoleId;
   status?: MembershipStatus;
   unitNumber?: string;
+  buildingId?: string;
+  wingId?: string;
+  unitId?: string;
 }
 
 export function validateMemberQuery(
@@ -308,8 +314,18 @@ export function validateMemberQuery(
     pageSize: parsedPageSize,
   };
 
-  if (params.search && typeof params.search === "string" && params.search.trim()) {
-    query.search = params.search.trim();
+  if (params.search && typeof params.search === "string") {
+    const trimmed = params.search.trim();
+    if (trimmed.length > 100) {
+      return {
+        isValid: false,
+        error: "Search query exceeds maximum allowed length of 100 characters.",
+        statusCode: 400,
+      };
+    }
+    if (trimmed.length > 0) {
+      query.search = trimmed;
+    }
   }
 
   if (params.role && typeof params.role === "string" && params.role.trim()) {
@@ -330,21 +346,228 @@ export function validateMemberQuery(
     query.unitNumber = params.unitNumber.trim();
   }
 
+  // Validate buildingId UUID if provided
+  if (params.buildingId !== undefined && params.buildingId !== null && String(params.buildingId).trim() !== "") {
+    const bId = String(params.buildingId).trim();
+    if (!UUID_REGEX.test(bId)) {
+      return {
+        isValid: false,
+        error: "Invalid buildingId: must be a valid UUID.",
+        statusCode: 400,
+      };
+    }
+    query.buildingId = bId;
+  }
+
+  // Validate wingId UUID if provided
+  if (params.wingId !== undefined && params.wingId !== null && String(params.wingId).trim() !== "") {
+    const wId = String(params.wingId).trim();
+    if (!UUID_REGEX.test(wId)) {
+      return {
+        isValid: false,
+        error: "Invalid wingId: must be a valid UUID.",
+        statusCode: 400,
+      };
+    }
+    query.wingId = wId;
+  }
+
+  // Validate unitId UUID if provided
+  if (params.unitId !== undefined && params.unitId !== null && String(params.unitId).trim() !== "") {
+    const uId = String(params.unitId).trim();
+    if (!UUID_REGEX.test(uId)) {
+      return {
+        isValid: false,
+        error: "Invalid unitId: must be a valid UUID.",
+        statusCode: 400,
+      };
+    }
+    query.unitId = uId;
+  }
+
   return { isValid: true, statusCode: 200, query };
 }
 
-/**
- * Server component / route helper that enforces society administrator access.
- * Redirects to /unauthorized if caller is not an authorized society admin.
- */
-export async function requireSocietyAdmin(
-  societyId: string
-): Promise<{ identity: UserIdentity; society: Society }> {
-  const { identity, society } = await requireSocietyAccess(societyId);
+export interface ValidateMemberStatusChangeParams {
+  identity: UserIdentity | null;
+  targetSocietyId: string;
+  targetMember: {
+    user_id: string;
+    society_id: string;
+    role_id: RoleId;
+    status: MembershipStatus;
+  } | null;
+  newStatus: string;
+}
 
-  if (!isAuthorizedSocietyAdmin(identity, societyId)) {
-    redirect("/unauthorized");
+export function validateMemberStatusChange(params: ValidateMemberStatusChangeParams): ValidationResult {
+  const { identity, targetSocietyId, targetMember, newStatus } = params;
+
+  // 1. Authentication & Management Authorization
+  if (!identity || !identity.isAuthenticated) {
+    return { isValid: false, error: "Authentication required.", statusCode: 401 };
   }
 
-  return { identity, society };
+  if (!canManageRoles(identity, targetSocietyId)) {
+    return {
+      isValid: false,
+      error: "Forbidden: Administrator privileges required to manage member status.",
+      statusCode: 403,
+    };
+  }
+
+  // 2. Member exists
+  if (!targetMember) {
+    return { isValid: false, error: "Member not found in this society.", statusCode: 404 };
+  }
+
+  // 3. Tenant Boundary Check
+  if (targetMember.society_id !== targetSocietyId) {
+    return {
+      isValid: false,
+      error: "Tenant boundary violation: Member does not belong to this society.",
+      statusCode: 403,
+    };
+  }
+
+  // 4. Self-Status Modification Prevention
+  const callerUserId = identity.effectiveUser.id;
+  if (callerUserId === targetMember.user_id) {
+    return {
+      isValid: false,
+      error: "Self-Modification Prevention: You cannot modify your own membership status.",
+      statusCode: 403,
+    };
+  }
+
+  // 5. Status Validation
+  if (!VALID_MEMBERSHIP_STATUSES.includes(newStatus as MembershipStatus)) {
+    return {
+      isValid: false,
+      error: `Invalid status '${newStatus}'. Allowed statuses: ${VALID_MEMBERSHIP_STATUSES.join(", ")}`,
+      statusCode: 400,
+    };
+  }
+
+  // 6. Cannot transition an existing member to INVITED
+  if (newStatus === "INVITED" && targetMember.status !== "INVITED") {
+    return {
+      isValid: false,
+      error: "Invalid transition: Existing members cannot be transitioned to INVITED status.",
+      statusCode: 400,
+    };
+  }
+
+  return { isValid: true, statusCode: 200 };
 }
+
+export interface ValidateUnitAssociationParams {
+  identity: UserIdentity | null;
+  targetSocietyId: string;
+  targetMember: {
+    user_id: string;
+    society_id: string;
+  } | null;
+  targetUnit?: {
+    id: string;
+    society_id: string;
+    unit_number: string;
+  } | null;
+  unitId?: string | null;
+  unitNumber?: string | null;
+}
+
+export function validateUnitAssociation(params: ValidateUnitAssociationParams): ValidationResult {
+  const { identity, targetSocietyId, targetMember, targetUnit, unitId, unitNumber } = params;
+
+  if (!identity || !identity.isAuthenticated) {
+    return { isValid: false, error: "Authentication required.", statusCode: 401 };
+  }
+
+  if (!isAuthorizedSocietyAdmin(identity, targetSocietyId)) {
+    return {
+      isValid: false,
+      error: "Forbidden: Administrator authorization required to associate units.",
+      statusCode: 403,
+    };
+  }
+
+  if (!targetMember) {
+    return { isValid: false, error: "Member not found in this society.", statusCode: 404 };
+  }
+
+  if (targetMember.society_id !== targetSocietyId) {
+    return {
+      isValid: false,
+      error: "Tenant boundary violation: Member does not belong to this society.",
+      statusCode: 403,
+    };
+  }
+
+  // If unassigning unit (both null/empty or explicit null)
+  const isUnassigning = !unitId && (!unitNumber || unitNumber.trim() === "");
+  if (isUnassigning) {
+    return { isValid: true, statusCode: 200 };
+  }
+
+  // If unitId is provided, validate UUID format
+  if (unitId && !UUID_REGEX.test(unitId)) {
+    return { isValid: false, error: "Invalid unitId: must be a valid UUID.", statusCode: 400 };
+  }
+
+  // If targetUnit record is evaluated
+  if (targetUnit) {
+    if (targetUnit.society_id !== targetSocietyId) {
+      return {
+        isValid: false,
+        error: "Tenant boundary violation: Target unit belongs to a different society.",
+        statusCode: 403,
+      };
+    }
+  }
+
+  return { isValid: true, statusCode: 200 };
+}
+
+export interface ValidateRelationshipAccessParams {
+  identity: UserIdentity | null;
+  targetSocietyId: string;
+  targetMember: {
+    user_id: string;
+    society_id: string;
+  } | null;
+}
+
+export function validateRelationshipAccess(params: ValidateRelationshipAccessParams): ValidationResult {
+  const { identity, targetSocietyId, targetMember } = params;
+
+  if (!identity || !identity.isAuthenticated) {
+    return { isValid: false, error: "Authentication required.", statusCode: 401 };
+  }
+
+  if (!targetMember) {
+    return { isValid: false, error: "Member not found in this society.", statusCode: 404 };
+  }
+
+  if (targetMember.society_id !== targetSocietyId) {
+    return {
+      isValid: false,
+      error: "Tenant boundary violation: Member does not belong to this society.",
+      statusCode: 403,
+    };
+  }
+
+  const isSelf = identity.effectiveUser.id === targetMember.user_id;
+  const isAdmin = isAuthorizedSocietyAdmin(identity, targetSocietyId);
+
+  if (!isAdmin && !isSelf) {
+    return {
+      isValid: false,
+      error: "Forbidden: You are not authorized to view this member's relationships.",
+      statusCode: 403,
+    };
+  }
+
+  return { isValid: true, statusCode: 200 };
+}
+

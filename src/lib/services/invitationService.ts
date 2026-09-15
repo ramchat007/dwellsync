@@ -185,7 +185,6 @@ export async function acceptInvitation(
         role_id: invite.role_id,
         unit_number: invite.unit_number || null,
         status: "ACTIVE",
-        joined_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       },
       { onConflict: "society_id,user_id,role_id" }

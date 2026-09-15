@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { requireSocietyAccess } from "@/lib/auth/server";
+import { getCurrentIdentity } from "@/lib/auth/server";
+import { isAuthorizedSocietyAdmin } from "@/lib/auth/societyAdmin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { recordAuditLog } from "@/lib/auth/audit";
 import { sendDomainNotification } from "@/lib/services/notificationService";
@@ -12,14 +13,17 @@ export async function POST(
 ) {
   try {
     const { societyId, requestId } = await params;
-    const { identity } = await requireSocietyAccess(societyId);
+    const identity = await getCurrentIdentity();
 
-    // 1. Administrative Role Enforcement
-    const isAuthorizedAdmin =
-      identity.isSuperAdmin ||
-      ["SOCIETY_ADMIN", "SECRETARY", "MANAGER"].includes(identity.currentRole || "");
+    if (!identity || !identity.isAuthenticated) {
+      return NextResponse.json(
+        { error: "Authentication required." },
+        { status: 401 }
+      );
+    }
 
-    if (!isAuthorizedAdmin) {
+    // 1. Administrative Role Enforcement: Only authorized society administrators
+    if (!isAuthorizedSocietyAdmin(identity, societyId)) {
       return NextResponse.json(
         { error: "Unauthorized. Society administrative privileges required to reject access requests." },
         { status: 403 }
@@ -95,7 +99,7 @@ export async function POST(
         .from("society_memberships")
         .update({
           status: "REMOVED",
-          left_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
         })
         .eq("id", requestId)
         .eq("society_id", societyId);

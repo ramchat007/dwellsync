@@ -33,8 +33,6 @@ export default async function SocietyMembersPage({
       role_id,
       unit_number,
       status,
-      joined_at,
-      left_at,
       created_at,
       updated_at,
       profile:profiles!user_id (

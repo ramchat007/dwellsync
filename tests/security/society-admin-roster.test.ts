@@ -649,5 +649,122 @@ describe("WP-04: Society Administrator Dashboard + Member & Roster Management Se
       expect(res.isValid).toBe(true);
       expect(res.query?.unitNumber).toBe("A-101");
     });
+
+    it("49. Member query rejects search query exceeding 100 characters with 400", () => {
+      const longSearch = "a".repeat(101);
+      const res = validateMemberQuery({
+        identity: adminAIdentity,
+        targetSocietyId: SOCIETY_A_ID,
+        search: longSearch,
+      });
+      expect(res.isValid).toBe(false);
+      expect(res.statusCode).toBe(400);
+      expect(res.error).toContain("exceeds maximum allowed length");
+    });
+
+    it("50. Member query accepts search query up to 100 characters", () => {
+      const validSearch = "a".repeat(100);
+      const res = validateMemberQuery({
+        identity: adminAIdentity,
+        targetSocietyId: SOCIETY_A_ID,
+        search: validSearch,
+      });
+      expect(res.isValid).toBe(true);
+      expect(res.query?.search).toBe(validSearch);
+    });
+
+    it("51. Member query validates buildingId as UUID and accepts valid UUID", () => {
+      const validBuildingId = "11111111-2222-4333-8444-555555555555";
+      const res = validateMemberQuery({
+        identity: adminAIdentity,
+        targetSocietyId: SOCIETY_A_ID,
+        buildingId: validBuildingId,
+      });
+      expect(res.isValid).toBe(true);
+      expect(res.query?.buildingId).toBe(validBuildingId);
+    });
+
+    it("52. Member query rejects malformed buildingId with 400", () => {
+      const res = validateMemberQuery({
+        identity: adminAIdentity,
+        targetSocietyId: SOCIETY_A_ID,
+        buildingId: "not-a-uuid-string",
+      });
+      expect(res.isValid).toBe(false);
+      expect(res.statusCode).toBe(400);
+      expect(res.error).toContain("Invalid buildingId");
+    });
+
+    it("53. Member query validates wingId as UUID and accepts valid UUID", () => {
+      const validWingId = "22222222-3333-4444-8555-666666666666";
+      const res = validateMemberQuery({
+        identity: adminAIdentity,
+        targetSocietyId: SOCIETY_A_ID,
+        wingId: validWingId,
+      });
+      expect(res.isValid).toBe(true);
+      expect(res.query?.wingId).toBe(validWingId);
+    });
+
+    it("54. Member query rejects malformed wingId with 400", () => {
+      const res = validateMemberQuery({
+        identity: adminAIdentity,
+        targetSocietyId: SOCIETY_A_ID,
+        wingId: "12345",
+      });
+      expect(res.isValid).toBe(false);
+      expect(res.statusCode).toBe(400);
+      expect(res.error).toContain("Invalid wingId");
+    });
+
+    it("55. Member query validates unitId as UUID and accepts valid UUID", () => {
+      const validUnitId = "33333333-4444-4555-8666-777777777777";
+      const res = validateMemberQuery({
+        identity: adminAIdentity,
+        targetSocietyId: SOCIETY_A_ID,
+        unitId: validUnitId,
+      });
+      expect(res.isValid).toBe(true);
+      expect(res.query?.unitId).toBe(validUnitId);
+    });
+
+    it("56. Member query rejects malformed unitId with 400", () => {
+      const res = validateMemberQuery({
+        identity: adminAIdentity,
+        targetSocietyId: SOCIETY_A_ID,
+        unitId: "unit-id-injection--drop-table",
+      });
+      expect(res.isValid).toBe(false);
+      expect(res.statusCode).toBe(400);
+      expect(res.error).toContain("Invalid unitId");
+    });
+
+    it("57. Impersonated resident in View-As is denied access-request administration checks", () => {
+      const impResidentA = createMockIdentity({
+        userId: SUPER_ADMIN_USER_ID,
+        email: "superadmin@dwellsync.com",
+        role: "RESIDENT",
+        society: societyA,
+        isSuperAdmin: true,
+        isImpersonating: true,
+        targetSocietyId: SOCIETY_A_ID,
+        targetRoleId: "RESIDENT",
+      });
+      expect(isAuthorizedSocietyAdmin(impResidentA, SOCIETY_A_ID)).toBe(false);
+    });
+
+    it("58. Impersonated owner in View-As is denied role management capabilities", () => {
+      const impOwnerA = createMockIdentity({
+        userId: SUPER_ADMIN_USER_ID,
+        email: "superadmin@dwellsync.com",
+        role: "OWNER",
+        society: societyA,
+        isSuperAdmin: true,
+        isImpersonating: true,
+        targetSocietyId: SOCIETY_A_ID,
+        targetRoleId: "OWNER",
+      });
+      expect(canManageRoles(impOwnerA, SOCIETY_A_ID)).toBe(false);
+    });
   });
 });

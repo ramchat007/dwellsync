@@ -113,7 +113,6 @@ export async function createSocietyOnboarding(
       user_id: adminUserId,
       role_id: "SOCIETY_ADMIN" as RoleId,
       status: "ACTIVE",
-      joined_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     },
     { onConflict: "society_id,user_id,role_id" }
