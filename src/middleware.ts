@@ -59,6 +59,8 @@ export async function middleware(request: NextRequest) {
   const isPublicRoute =
     pathname === "/login" ||
     pathname === "/unauthorized" ||
+    pathname === "/terms" ||
+    pathname === "/privacy" ||
     pathname.startsWith("/api/auth") ||
     pathname.startsWith("/api/health") ||
     pathname === "/api/society/directory" ||

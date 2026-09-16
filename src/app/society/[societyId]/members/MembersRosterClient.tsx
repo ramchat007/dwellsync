@@ -22,6 +22,7 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
+  Ban,
   ArrowUpDown,
   Filter,
   Home,
@@ -99,6 +100,7 @@ export function MembersRosterClient({
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [unitFilter, setUnitFilter] = useState<string>("");
 
+  // Detail Modal
   // Detail Modal & Relationships
   const [detailMember, setDetailMember] = useState<MemberRecord | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -613,6 +615,7 @@ export function MembersRosterClient({
                       <TableCell>{getStatusBadge(m.status)}</TableCell>
 
                       <TableCell className="text-xs text-slate-600">
+                        {m.joined_at ? formatDate(m.joined_at) : formatDate(m.created_at)}
                         {formatDate(m.created_at)}
                       </TableCell>
 
@@ -789,6 +792,10 @@ export function MembersRosterClient({
                   {getStatusBadge(detailMember.status)}
                 </div>
                 <div>
+                  <span className="text-slate-400 block text-[10px]">Joined At</span>
+                  <span className="text-slate-700">
+                    {detailMember.joined_at ? formatDate(detailMember.joined_at) : "N/A"}
+                  </span>
                   <span className="text-slate-400 block text-[10px]">Updated At</span>
                   <span className="text-slate-700">{formatDate(detailMember.updated_at)}</span>
                 </div>

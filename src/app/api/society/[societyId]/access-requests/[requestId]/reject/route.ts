@@ -99,6 +99,7 @@ export async function POST(
         .from("society_memberships")
         .update({
           status: "REMOVED",
+          left_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
         .eq("id", requestId)

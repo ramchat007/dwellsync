@@ -67,6 +67,7 @@ export async function assignMembership(
     .upsert(
       {
         ...parsed.data,
+        joined_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       },
       { onConflict: "society_id,user_id,role_id" }
@@ -141,6 +142,7 @@ export async function removeMembership(
     .from("society_memberships")
     .update({
       status: "REMOVED",
+      left_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
     .eq("id", id)

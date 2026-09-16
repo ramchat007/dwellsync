@@ -117,6 +117,21 @@ export default async function HomePage() {
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Immutable Audit Ledger
           </span>
         </div>
+
+        {/* Legal & Navigation Links */}
+        <div className="pt-2 flex items-center justify-center gap-6 text-xs text-slate-500">
+          <Link href="/terms" className="hover:text-slate-300 transition-colors">
+            Terms of Service
+          </Link>
+          <span>•</span>
+          <Link href="/privacy" className="hover:text-slate-300 transition-colors">
+            Privacy Policy
+          </Link>
+          <span>•</span>
+          <Link href="/login" className="hover:text-slate-300 transition-colors">
+            Sign In
+          </Link>
+        </div>
       </div>
     </main>
   );
