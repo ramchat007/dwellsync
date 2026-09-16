@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { BuildingWithHierarchy } from "@/lib/services/buildingService";
-import { Building, Wing, Floor, Unit, UnitType, UnitStatus, Society } from "@/lib/types/database";
+import { Building, Wing, Floor, UnitType, UnitStatus, Society } from "@/lib/types/database";
 import {
   Building2,
   Layers,
@@ -15,6 +15,8 @@ import {
   CheckCircle2,
   AlertCircle,
   Sparkles,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,15 +67,19 @@ export function BuildingHierarchyClient({
     setBuildings(initialBuildings);
   }, [initialBuildings]);
 
-  // Modals
+  // Dialogs
   const [isAddBuildingOpen, setIsAddBuildingOpen] = useState(false);
+  const [isEditBuildingOpen, setIsEditBuildingOpen] = useState(false);
   const [isAddWingOpen, setIsAddWingOpen] = useState(false);
+  const [isEditWingOpen, setIsEditWingOpen] = useState(false);
   const [isAddFloorOpen, setIsAddFloorOpen] = useState(false);
   const [isAddUnitOpen, setIsAddUnitOpen] = useState(false);
   const [isBulkGeneratorOpen, setIsBulkGeneratorOpen] = useState(false);
 
   const [selectedBuilding, setSelectedBuilding] = useState<BuildingWithHierarchy | null>(null);
+  const [selectedWing, setSelectedWing] = useState<Wing | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [dialogError, setDialogError] = useState<string | null>(null);
 
   // Form states
   const [buildingForm, setBuildingForm] = useState({ name: "", code: "", number_of_floors: 1 });
@@ -97,6 +103,7 @@ export function BuildingHierarchyClient({
 
   const handleCreateBuilding = async (e: React.FormEvent) => {
     e.preventDefault();
+    setDialogError(null);
     try {
       setIsSubmitting(true);
       const res = await fetch(`/api/society/${societyId}/buildings`, {
@@ -115,19 +122,70 @@ export function BuildingHierarchyClient({
         setBuildingForm({ name: "", code: "", number_of_floors: 1 });
         router.refresh();
       } else {
-        alert(data.error || "Failed to create building");
+        setDialogError(data.error || "Failed to create building");
       }
-    } catch (err) {
-      console.error(err);
-      alert("Error creating building");
+    } catch (err: any) {
+      setDialogError(err?.message || "Error creating building");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleUpdateBuilding = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedBuilding) return;
+    setDialogError(null);
+
+    try {
+      setIsSubmitting(true);
+      const res = await fetch(`/api/society/${societyId}/buildings/${selectedBuilding.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: buildingForm.name,
+          code: buildingForm.code,
+          number_of_floors: Number(buildingForm.number_of_floors),
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setIsEditBuildingOpen(false);
+        router.refresh();
+      } else {
+        setDialogError(data.error || "Failed to update building");
+      }
+    } catch (err: any) {
+      setDialogError(err?.message || "Error updating building");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteBuilding = async (building: BuildingWithHierarchy) => {
+    if (!confirm(`Are you sure you want to delete ${building.name}? This will check for child units/wings first.`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/society/${societyId}/buildings/${building.id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        router.refresh();
+      } else {
+        alert(data.error || "Failed to delete building");
+      }
+    } catch (err: any) {
+      alert(err?.message || "Error deleting building");
     }
   };
 
   const handleCreateWing = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedBuilding) return;
+    setDialogError(null);
 
     try {
       setIsSubmitting(true);
@@ -147,19 +205,69 @@ export function BuildingHierarchyClient({
         setWingForm({ name: "", code: "" });
         router.refresh();
       } else {
-        alert(data.error || "Failed to create wing");
+        setDialogError(data.error || "Failed to create wing");
       }
-    } catch (err) {
-      console.error(err);
-      alert("Error creating wing");
+    } catch (err: any) {
+      setDialogError(err?.message || "Error creating wing");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleUpdateWing = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedWing) return;
+    setDialogError(null);
+
+    try {
+      setIsSubmitting(true);
+      const res = await fetch(`/api/society/${societyId}/wings/${selectedWing.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: wingForm.name,
+          code: wingForm.code,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setIsEditWingOpen(false);
+        router.refresh();
+      } else {
+        setDialogError(data.error || "Failed to update wing");
+      }
+    } catch (err: any) {
+      setDialogError(err?.message || "Error updating wing");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteWing = async (wing: Wing) => {
+    if (!confirm(`Are you sure you want to delete ${wing.name}? This will check for child units/floors first.`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/society/${societyId}/wings/${wing.id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        router.refresh();
+      } else {
+        alert(data.error || "Failed to delete wing");
+      }
+    } catch (err: any) {
+      alert(err?.message || "Error deleting wing");
     }
   };
 
   const handleCreateFloor = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedBuilding) return;
+    setDialogError(null);
 
     try {
       setIsSubmitting(true);
@@ -180,11 +288,10 @@ export function BuildingHierarchyClient({
         setFloorForm({ name: "", floor_number: 1, wing_id: "" });
         router.refresh();
       } else {
-        alert(data.error || "Failed to create floor");
+        setDialogError(data.error || "Failed to create floor");
       }
-    } catch (err) {
-      console.error(err);
-      alert("Error creating floor");
+    } catch (err: any) {
+      setDialogError(err?.message || "Error creating floor");
     } finally {
       setIsSubmitting(false);
     }
@@ -193,6 +300,7 @@ export function BuildingHierarchyClient({
   const handleCreateUnit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedBuilding) return;
+    setDialogError(null);
 
     try {
       setIsSubmitting(true);
@@ -223,11 +331,10 @@ export function BuildingHierarchyClient({
         });
         router.refresh();
       } else {
-        alert(data.error || "Failed to create unit");
+        setDialogError(data.error || "Failed to create unit");
       }
-    } catch (err) {
-      console.error(err);
-      alert("Error creating unit");
+    } catch (err: any) {
+      setDialogError(err?.message || "Error creating unit");
     } finally {
       setIsSubmitting(false);
     }
@@ -277,7 +384,11 @@ export function BuildingHierarchyClient({
           )}
 
           <Button
-            onClick={() => setIsAddBuildingOpen(true)}
+            onClick={() => {
+              setDialogError(null);
+              setBuildingForm({ name: "", code: "", number_of_floors: 1 });
+              setIsAddBuildingOpen(true);
+            }}
             className="bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5 text-xs"
           >
             <Plus className="w-4 h-4" /> Add Building / Tower
@@ -350,33 +461,78 @@ export function BuildingHierarchyClient({
                       size="sm"
                       onClick={() => {
                         setSelectedBuilding(building);
+                        setDialogError(null);
+                        setBuildingForm({
+                          name: building.name,
+                          code: building.code,
+                          number_of_floors: building.number_of_floors,
+                        });
+                        setIsEditBuildingOpen(true);
+                      }}
+                      className="text-xs h-8 px-2"
+                      title="Edit Building"
+                    >
+                      <Pencil className="w-3.5 h-3.5 text-slate-600" />
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDeleteBuilding(building)}
+                      className="text-xs h-8 px-2 text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                      title="Delete Building"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedBuilding(building);
+                        setDialogError(null);
+                        setWingForm({ name: "", code: "" });
                         setIsAddWingOpen(true);
                       }}
                       className="text-xs h-8 gap-1"
                     >
                       <Plus className="w-3.5 h-3.5" /> Wing
                     </Button>
+
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => {
                         setSelectedBuilding(building);
+                        setDialogError(null);
+                        setFloorForm({ name: "", floor_number: 1, wing_id: "" });
                         setIsAddFloorOpen(true);
                       }}
                       className="text-xs h-8 gap-1"
                     >
                       <Plus className="w-3.5 h-3.5" /> Floor
                     </Button>
+
                     <Button
                       size="sm"
                       onClick={() => {
                         setSelectedBuilding(building);
+                        setDialogError(null);
+                        setUnitForm({
+                          unit_number: "",
+                          unit_type: "2_BHK",
+                          status: "VACANT",
+                          wing_id: "",
+                          floor_id: "",
+                          area_sqft: "",
+                        });
                         setIsAddUnitOpen(true);
                       }}
                       className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs h-8 gap-1"
                     >
                       <Plus className="w-3.5 h-3.5" /> Unit
                     </Button>
+
                     <button
                       onClick={() => setExpandedBuildingId(isExpanded ? null : building.id)}
                       className="p-1 text-slate-400 hover:text-slate-700 transition-colors"
@@ -398,10 +554,33 @@ export function BuildingHierarchyClient({
                           {building.wings.map((w) => (
                             <div
                               key={w.id}
-                              className="p-3 rounded-lg bg-white border border-slate-200 shadow-2xs text-xs"
+                              className="p-3 rounded-lg bg-white border border-slate-200 shadow-2xs text-xs flex items-center justify-between group"
                             >
-                              <div className="font-bold text-slate-900">{w.name}</div>
-                              <div className="text-[10px] text-slate-500 font-mono">Code: {w.code}</div>
+                              <div>
+                                <div className="font-bold text-slate-900">{w.name}</div>
+                                <div className="text-[10px] text-slate-500 font-mono">Code: {w.code}</div>
+                              </div>
+                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button
+                                  onClick={() => {
+                                    setSelectedWing(w);
+                                    setDialogError(null);
+                                    setWingForm({ name: w.name, code: w.code });
+                                    setIsEditWingOpen(true);
+                                  }}
+                                  className="p-1 hover:bg-slate-100 rounded text-slate-500"
+                                  title="Edit Wing"
+                                >
+                                  <Pencil className="w-3 h-3" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteWing(w)}
+                                  className="p-1 hover:bg-rose-50 rounded text-rose-500"
+                                  title="Delete Wing"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -455,7 +634,11 @@ export function BuildingHierarchyClient({
             </CardDescription>
             <div className="pt-4">
               <Button
-                onClick={() => setIsAddBuildingOpen(true)}
+                onClick={() => {
+                  setDialogError(null);
+                  setBuildingForm({ name: "", code: "", number_of_floors: 1 });
+                  setIsAddBuildingOpen(true);
+                }}
                 className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs gap-1.5"
               >
                 <Plus className="w-4 h-4" /> Add Building Now
@@ -476,276 +659,434 @@ export function BuildingHierarchyClient({
 
       {/* Add Building Dialog */}
       <Dialog open={isAddBuildingOpen} onOpenChange={setIsAddBuildingOpen}>
-        <DialogHeader>
-          <DialogTitle>Add Building / Tower</DialogTitle>
-          <DialogDescription>
-            Create a structural building or tower within this housing society.
-          </DialogDescription>
-        </DialogHeader>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Building / Tower</DialogTitle>
+            <DialogDescription>
+              Create a structural building or tower within this housing society.
+            </DialogDescription>
+          </DialogHeader>
 
-        <form onSubmit={handleCreateBuilding} className="space-y-3.5 mt-3 text-xs">
-          <div className="space-y-1">
-            <label className="font-semibold text-slate-700">Building Name *</label>
-            <Input
-              required
-              placeholder="e.g. Tower A / Block 1"
-              value={buildingForm.name}
-              onChange={(e) => setBuildingForm({ ...buildingForm, name: e.target.value })}
-              className="text-xs"
-            />
-          </div>
+          {dialogError && (
+            <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-lg flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{dialogError}</span>
+            </div>
+          )}
 
-          <div className="grid grid-cols-2 gap-3">
+          <form onSubmit={handleCreateBuilding} className="space-y-3.5 mt-3 text-xs">
             <div className="space-y-1">
-              <label className="font-semibold text-slate-700">Building Code *</label>
+              <label className="font-semibold text-slate-700">Building Name *</label>
               <Input
                 required
-                placeholder="e.g. TWR-A"
-                value={buildingForm.code}
-                onChange={(e) => setBuildingForm({ ...buildingForm, code: e.target.value.toUpperCase() })}
-                className="text-xs font-mono uppercase"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="font-semibold text-slate-700">Total Floors</label>
-              <Input
-                type="number"
-                min="0"
-                value={buildingForm.number_of_floors}
-                onChange={(e) =>
-                  setBuildingForm({ ...buildingForm, number_of_floors: parseInt(e.target.value) || 0 })
-                }
+                placeholder="e.g. Tower A / Block 1"
+                value={buildingForm.name}
+                onChange={(e) => setBuildingForm({ ...buildingForm, name: e.target.value })}
                 className="text-xs"
               />
             </div>
-          </div>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsAddBuildingOpen(false)}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting} className="bg-indigo-600 hover:bg-indigo-700">
-              {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : null}
-              Create Building
-            </Button>
-          </DialogFooter>
-        </form>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-700">Building Code *</label>
+                <Input
+                  required
+                  placeholder="e.g. TWR-A"
+                  value={buildingForm.code}
+                  onChange={(e) => setBuildingForm({ ...buildingForm, code: e.target.value.toUpperCase() })}
+                  className="text-xs font-mono uppercase"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-700">Total Floors</label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={buildingForm.number_of_floors}
+                  onChange={(e) =>
+                    setBuildingForm({ ...buildingForm, number_of_floors: parseInt(e.target.value) || 0 })
+                  }
+                  className="text-xs"
+                />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsAddBuildingOpen(false)}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting} className="bg-indigo-600 hover:bg-indigo-700">
+                {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : null}
+                Create Building
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Building Dialog */}
+      <Dialog open={isEditBuildingOpen} onOpenChange={setIsEditBuildingOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Building</DialogTitle>
+            <DialogDescription>
+              Update metadata for {selectedBuilding?.name}.
+            </DialogDescription>
+          </DialogHeader>
+
+          {dialogError && (
+            <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-lg flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{dialogError}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleUpdateBuilding} className="space-y-3.5 mt-3 text-xs">
+            <div className="space-y-1">
+              <label className="font-semibold text-slate-700">Building Name *</label>
+              <Input
+                required
+                value={buildingForm.name}
+                onChange={(e) => setBuildingForm({ ...buildingForm, name: e.target.value })}
+                className="text-xs"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-700">Building Code *</label>
+                <Input
+                  required
+                  value={buildingForm.code}
+                  onChange={(e) => setBuildingForm({ ...buildingForm, code: e.target.value.toUpperCase() })}
+                  className="text-xs font-mono uppercase"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-700">Total Floors</label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={buildingForm.number_of_floors}
+                  onChange={(e) =>
+                    setBuildingForm({ ...buildingForm, number_of_floors: parseInt(e.target.value) || 0 })
+                  }
+                  className="text-xs"
+                />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsEditBuildingOpen(false)}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting} className="bg-indigo-600 hover:bg-indigo-700">
+                {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : null}
+                Save Changes
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
       </Dialog>
 
       {/* Add Wing Dialog */}
       <Dialog open={isAddWingOpen} onOpenChange={setIsAddWingOpen}>
-        <DialogHeader>
-          <DialogTitle>Add Wing to {selectedBuilding?.name}</DialogTitle>
-          <DialogDescription>Specify a wing or section within this building.</DialogDescription>
-        </DialogHeader>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Wing to {selectedBuilding?.name}</DialogTitle>
+            <DialogDescription>Specify a wing or section within this building.</DialogDescription>
+          </DialogHeader>
 
-        <form onSubmit={handleCreateWing} className="space-y-3.5 mt-3 text-xs">
-          <div className="space-y-1">
-            <label className="font-semibold text-slate-700">Wing Name *</label>
-            <Input
-              required
-              placeholder="e.g. Wing A / East Wing"
-              value={wingForm.name}
-              onChange={(e) => setWingForm({ ...wingForm, name: e.target.value })}
-              className="text-xs"
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="font-semibold text-slate-700">Wing Code *</label>
-            <Input
-              required
-              placeholder="e.g. WING-A"
-              value={wingForm.code}
-              onChange={(e) => setWingForm({ ...wingForm, code: e.target.value.toUpperCase() })}
-              className="text-xs font-mono uppercase"
-            />
-          </div>
+          {dialogError && (
+            <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-lg flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{dialogError}</span>
+            </div>
+          )}
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsAddWingOpen(false)}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting} className="bg-indigo-600 hover:bg-indigo-700">
-              {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : null}
-              Create Wing
-            </Button>
-          </DialogFooter>
-        </form>
+          <form onSubmit={handleCreateWing} className="space-y-3.5 mt-3 text-xs">
+            <div className="space-y-1">
+              <label className="font-semibold text-slate-700">Wing Name *</label>
+              <Input
+                required
+                placeholder="e.g. Wing A / East Wing"
+                value={wingForm.name}
+                onChange={(e) => setWingForm({ ...wingForm, name: e.target.value })}
+                className="text-xs"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="font-semibold text-slate-700">Wing Code *</label>
+              <Input
+                required
+                placeholder="e.g. WING-A"
+                value={wingForm.code}
+                onChange={(e) => setWingForm({ ...wingForm, code: e.target.value.toUpperCase() })}
+                className="text-xs font-mono uppercase"
+              />
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsAddWingOpen(false)}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting} className="bg-indigo-600 hover:bg-indigo-700">
+                {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : null}
+                Create Wing
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Wing Dialog */}
+      <Dialog open={isEditWingOpen} onOpenChange={setIsEditWingOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Wing</DialogTitle>
+            <DialogDescription>Update wing details for {selectedWing?.name}.</DialogDescription>
+          </DialogHeader>
+
+          {dialogError && (
+            <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-lg flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{dialogError}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleUpdateWing} className="space-y-3.5 mt-3 text-xs">
+            <div className="space-y-1">
+              <label className="font-semibold text-slate-700">Wing Name *</label>
+              <Input
+                required
+                value={wingForm.name}
+                onChange={(e) => setWingForm({ ...wingForm, name: e.target.value })}
+                className="text-xs"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="font-semibold text-slate-700">Wing Code *</label>
+              <Input
+                required
+                value={wingForm.code}
+                onChange={(e) => setWingForm({ ...wingForm, code: e.target.value.toUpperCase() })}
+                className="text-xs font-mono uppercase"
+              />
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsEditWingOpen(false)}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting} className="bg-indigo-600 hover:bg-indigo-700">
+                {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : null}
+                Save Changes
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
       </Dialog>
 
       {/* Add Floor Dialog */}
       <Dialog open={isAddFloorOpen} onOpenChange={setIsAddFloorOpen}>
-        <DialogHeader>
-          <DialogTitle>Add Floor to {selectedBuilding?.name}</DialogTitle>
-          <DialogDescription>Register a floor level in the building hierarchy.</DialogDescription>
-        </DialogHeader>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Floor to {selectedBuilding?.name}</DialogTitle>
+            <DialogDescription>Register a floor level in the building hierarchy.</DialogDescription>
+          </DialogHeader>
 
-        <form onSubmit={handleCreateFloor} className="space-y-3.5 mt-3 text-xs">
-          <div className="space-y-1">
-            <label className="font-semibold text-slate-700">Floor Name / Label *</label>
-            <Input
-              required
-              placeholder="e.g. Ground Floor / 1st Floor / Basement"
-              value={floorForm.name}
-              onChange={(e) => setFloorForm({ ...floorForm, name: e.target.value })}
-              className="text-xs"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
+          {dialogError && (
+            <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-lg flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{dialogError}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleCreateFloor} className="space-y-3.5 mt-3 text-xs">
             <div className="space-y-1">
-              <label className="font-semibold text-slate-700">Floor Number *</label>
+              <label className="font-semibold text-slate-700">Floor Name / Label *</label>
               <Input
-                type="number"
                 required
-                placeholder="0 for Ground, -1 for Basement"
-                value={floorForm.floor_number}
-                onChange={(e) => setFloorForm({ ...floorForm, floor_number: parseInt(e.target.value) || 0 })}
-                className="text-xs font-mono"
+                placeholder="e.g. Ground Floor / 1st Floor / Basement"
+                value={floorForm.name}
+                onChange={(e) => setFloorForm({ ...floorForm, name: e.target.value })}
+                className="text-xs"
               />
             </div>
-            {selectedBuilding?.wings && selectedBuilding.wings.length > 0 && (
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="font-semibold text-slate-700">Wing (Optional)</label>
+                <label className="font-semibold text-slate-700">Floor Number *</label>
+                <Input
+                  type="number"
+                  required
+                  placeholder="0 for Ground, -1 for Basement"
+                  value={floorForm.floor_number}
+                  onChange={(e) => setFloorForm({ ...floorForm, floor_number: parseInt(e.target.value) || 0 })}
+                  className="text-xs font-mono"
+                />
+              </div>
+              {selectedBuilding?.wings && selectedBuilding.wings.length > 0 && (
+                <div className="space-y-1">
+                  <label className="font-semibold text-slate-700">Wing (Optional)</label>
+                  <Select
+                    value={floorForm.wing_id}
+                    onChange={(e) => setFloorForm({ ...floorForm, wing_id: e.target.value })}
+                    className="text-xs"
+                  >
+                    <option value="">All / Building Level</option>
+                    {selectedBuilding.wings.map((w) => (
+                      <option key={w.id} value={w.id}>
+                        {w.name} ({w.code})
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsAddFloorOpen(false)}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting} className="bg-indigo-600 hover:bg-indigo-700">
+                {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : null}
+                Create Floor
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Unit Dialog */}
+      <Dialog open={isAddUnitOpen} onOpenChange={setIsAddUnitOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Unit / Flat to {selectedBuilding?.name}</DialogTitle>
+            <DialogDescription>Register an individual apartment or commercial unit.</DialogDescription>
+          </DialogHeader>
+
+          {dialogError && (
+            <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-lg flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{dialogError}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleCreateUnit} className="space-y-3.5 mt-3 text-xs">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-700">Unit / Flat Number *</label>
+                <Input
+                  required
+                  placeholder="e.g. 101 / A-204"
+                  value={unitForm.unit_number}
+                  onChange={(e) => setUnitForm({ ...unitForm, unit_number: e.target.value })}
+                  className="text-xs font-mono font-semibold"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-700">Unit Type</label>
                 <Select
-                  value={floorForm.wing_id}
-                  onChange={(e) => setFloorForm({ ...floorForm, wing_id: e.target.value })}
+                  value={unitForm.unit_type}
+                  onChange={(e) => setUnitForm({ ...unitForm, unit_type: e.target.value as UnitType })}
                   className="text-xs"
                 >
-                  <option value="">All / Building Level</option>
+                  {UNIT_TYPES.map((t) => (
+                    <option key={t} value={t}>
+                      {t.replace(/_/g, " ")}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-700">Unit Status</label>
+                <Select
+                  value={unitForm.status}
+                  onChange={(e) => setUnitForm({ ...unitForm, status: e.target.value as UnitStatus })}
+                  className="text-xs"
+                >
+                  {UNIT_STATUSES.map((s) => (
+                    <option key={s} value={s}>
+                      {s.replace(/_/g, " ")}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-700">Carpet Area (sq. ft.)</label>
+                <Input
+                  type="number"
+                  placeholder="e.g. 850"
+                  value={unitForm.area_sqft}
+                  onChange={(e) => setUnitForm({ ...unitForm, area_sqft: e.target.value })}
+                  className="text-xs"
+                />
+              </div>
+            </div>
+
+            {selectedBuilding?.wings && selectedBuilding.wings.length > 0 && (
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-700">Assigned Wing</label>
+                <Select
+                  value={unitForm.wing_id}
+                  onChange={(e) => setUnitForm({ ...unitForm, wing_id: e.target.value })}
+                  className="text-xs"
+                >
+                  <option value="">No Wing Assignment</option>
                   {selectedBuilding.wings.map((w) => (
                     <option key={w.id} value={w.id}>
-                      {w.name} ({w.code})
+                      {w.name}
                     </option>
                   ))}
                 </Select>
               </div>
             )}
-          </div>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsAddFloorOpen(false)}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting} className="bg-indigo-600 hover:bg-indigo-700">
-              {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : null}
-              Create Floor
-            </Button>
-          </DialogFooter>
-        </form>
-      </Dialog>
-
-      {/* Add Unit Dialog */}
-      <Dialog open={isAddUnitOpen} onOpenChange={setIsAddUnitOpen}>
-        <DialogHeader>
-          <DialogTitle>Add Unit / Flat to {selectedBuilding?.name}</DialogTitle>
-          <DialogDescription>Register an individual apartment or commercial unit.</DialogDescription>
-        </DialogHeader>
-
-        <form onSubmit={handleCreateUnit} className="space-y-3.5 mt-3 text-xs">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <label className="font-semibold text-slate-700">Unit / Flat Number *</label>
-              <Input
-                required
-                placeholder="e.g. 101 / A-204"
-                value={unitForm.unit_number}
-                onChange={(e) => setUnitForm({ ...unitForm, unit_number: e.target.value })}
-                className="text-xs font-mono font-semibold"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="font-semibold text-slate-700">Unit Type</label>
-              <Select
-                value={unitForm.unit_type}
-                onChange={(e) => setUnitForm({ ...unitForm, unit_type: e.target.value as UnitType })}
-                className="text-xs"
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsAddUnitOpen(false)}
+                disabled={isSubmitting}
               >
-                {UNIT_TYPES.map((t) => (
-                  <option key={t} value={t}>
-                    {t.replace(/_/g, " ")}
-                  </option>
-                ))}
-              </Select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <label className="font-semibold text-slate-700">Unit Status</label>
-              <Select
-                value={unitForm.status}
-                onChange={(e) => setUnitForm({ ...unitForm, status: e.target.value as UnitStatus })}
-                className="text-xs"
-              >
-                {UNIT_STATUSES.map((s) => (
-                  <option key={s} value={s}>
-                    {s.replace(/_/g, " ")}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <label className="font-semibold text-slate-700">Carpet Area (sq. ft.)</label>
-              <Input
-                type="number"
-                placeholder="e.g. 850"
-                value={unitForm.area_sqft}
-                onChange={(e) => setUnitForm({ ...unitForm, area_sqft: e.target.value })}
-                className="text-xs"
-              />
-            </div>
-          </div>
-
-          {selectedBuilding?.wings && selectedBuilding.wings.length > 0 && (
-            <div className="space-y-1">
-              <label className="font-semibold text-slate-700">Assigned Wing</label>
-              <Select
-                value={unitForm.wing_id}
-                onChange={(e) => setUnitForm({ ...unitForm, wing_id: e.target.value })}
-                className="text-xs"
-              >
-                <option value="">No Wing Assignment</option>
-                {selectedBuilding.wings.map((w) => (
-                  <option key={w.id} value={w.id}>
-                    {w.name}
-                  </option>
-                ))}
-              </Select>
-            </div>
-          )}
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsAddUnitOpen(false)}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting} className="bg-indigo-600 hover:bg-indigo-700">
-              {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : null}
-              Create Unit
-            </Button>
-          </DialogFooter>
-        </form>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting} className="bg-indigo-600 hover:bg-indigo-700">
+                {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : null}
+                Create Unit
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
       </Dialog>
     </div>
   );
 }
-

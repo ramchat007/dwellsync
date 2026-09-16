@@ -17,6 +17,7 @@ export const wingSchema = z.object({
 
 export const wingUpdateSchema = wingSchema.partial().omit({ society_id: true, building_id: true });
 
-export type WingInput = z.infer<typeof wingSchema>;
-export type WingUpdateInput = z.infer<typeof wingUpdateSchema>;
+export type WingInput = z.input<typeof wingSchema>;
+export type WingOutput = z.output<typeof wingSchema>;
+export type WingUpdateInput = z.input<typeof wingUpdateSchema>;
 

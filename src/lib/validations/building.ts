@@ -17,6 +17,7 @@ export const buildingSchema = z.object({
 
 export const buildingUpdateSchema = buildingSchema.partial().omit({ society_id: true });
 
-export type BuildingInput = z.infer<typeof buildingSchema>;
-export type BuildingUpdateInput = z.infer<typeof buildingUpdateSchema>;
+export type BuildingInput = z.input<typeof buildingSchema>;
+export type BuildingOutput = z.output<typeof buildingSchema>;
+export type BuildingUpdateInput = z.input<typeof buildingUpdateSchema>;
 

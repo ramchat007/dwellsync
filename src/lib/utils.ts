@@ -16,3 +16,10 @@ export function formatDate(dateString: string | null | undefined): string {
     return dateString;
   }
 }
+
+export function isValidUuid(id: string | null | undefined): boolean {
+  if (!id || typeof id !== "string") return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+}
+
+

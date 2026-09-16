@@ -30,8 +30,19 @@ export const unitSchema = z.object({
   area_sqft: z.number().positive("Area must be positive").optional().nullable(),
   carpet_area_sqft: z.number().positive("Carpet area must be positive").optional().nullable(),
   built_up_area_sqft: z.number().positive("Built-up area must be positive").optional().nullable(),
+  super_built_up_area_sqft: z.number().positive("Super built-up area must be positive").optional().nullable(),
+  bedrooms: z.number().int().min(0).optional().nullable(),
+  bathrooms: z.number().int().min(0).optional().nullable(),
+  balconies: z.number().int().min(0).optional().nullable(),
+  parking_slots: z.number().int().min(0).optional().nullable(),
+  monthly_maintenance_override: z.number().min(0).optional().nullable(),
+  intercom_number: z.string().max(50).optional().nullable(),
+  meter_number_electricity: z.string().max(50).optional().nullable(),
+  meter_number_gas: z.string().max(50).optional().nullable(),
+  meter_number_water: z.string().max(50).optional().nullable(),
   status: unitStatusEnum.default("VACANT"),
 });
+
 
 export const unitUpdateSchema = unitSchema.partial().omit({ society_id: true, building_id: true });
 
@@ -48,6 +59,7 @@ export const unitBatchGenerationSchema = z.object({
   pattern: z.string().default("{prefix}{floor}{unit}"), // e.g. A-101, A-102 or 101, 102
 });
 
-export type UnitInput = z.infer<typeof unitSchema>;
-export type UnitUpdateInput = z.infer<typeof unitUpdateSchema>;
+export type UnitInput = z.input<typeof unitSchema>;
+export type UnitOutput = z.output<typeof unitSchema>;
+export type UnitUpdateInput = z.input<typeof unitUpdateSchema>;
 export type UnitBatchGenerationInput = z.infer<typeof unitBatchGenerationSchema>;

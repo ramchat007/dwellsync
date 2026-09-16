@@ -1,5 +1,5 @@
 import React from "react";
-import { requireSocietyAccess } from "@/lib/auth/server";
+import { requireSocietyAdmin } from "@/lib/auth/server";
 import { getBuildingsWithHierarchy } from "@/lib/services/buildingService";
 import { BuildingHierarchyClient } from "./BuildingHierarchyClient";
 
@@ -11,10 +11,15 @@ export default async function SocietyBuildingsPage({
   params: Promise<{ societyId: string }>;
 }) {
   const { societyId } = await params;
-  const { society } = await requireSocietyAccess(societyId);
+  const { society } = await requireSocietyAdmin(societyId);
 
   const buildings = await getBuildingsWithHierarchy(societyId);
 
-  return <BuildingHierarchyClient societyId={societyId} initialBuildings={buildings} society={society} />;
+  return (
+    <BuildingHierarchyClient
+      societyId={societyId}
+      initialBuildings={buildings}
+      society={society}
+    />
+  );
 }
-
