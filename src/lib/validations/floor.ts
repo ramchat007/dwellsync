@@ -14,6 +14,7 @@ export const floorSchema = z.object({
 
 export const floorUpdateSchema = floorSchema.partial().omit({ society_id: true, building_id: true });
 
-export type FloorInput = z.infer<typeof floorSchema>;
-export type FloorUpdateInput = z.infer<typeof floorUpdateSchema>;
+export type FloorInput = z.input<typeof floorSchema>;
+export type FloorOutput = z.output<typeof floorSchema>;
+export type FloorUpdateInput = z.input<typeof floorUpdateSchema>;
 
