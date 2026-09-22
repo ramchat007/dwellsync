@@ -17,6 +17,7 @@ import {
 import { SocietyMeeting } from "@/lib/types/database";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { TimeDisplay } from "@/components/ui/time-display";
 
 interface ResidentMeetingsClientProps {
   societyName: string;
@@ -127,20 +128,21 @@ export function ResidentMeetingsClient({
                     <div className="space-y-1.5 text-xs text-slate-600">
                       <div className="flex items-center">
                         <Calendar className="mr-2 h-3.5 w-3.5 text-slate-400" />
-                        {new Date(m.scheduled_at).toLocaleDateString(undefined, {
-                          weekday: "short",
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                        })}
+                        <TimeDisplay
+                          date={m.scheduled_at}
+                          format="date"
+                          options={{
+                            weekday: "short",
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          }}
+                        />
                       </div>
                       <div className="flex items-center">
                         <Clock className="mr-2 h-3.5 w-3.5 text-slate-400" />
-                        {new Date(m.scheduled_at).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}{" "}
-                        ({m.duration_minutes} mins)
+                        <TimeDisplay date={m.scheduled_at} format="time" />
+                        <span className="ml-1">({m.duration_minutes} mins)</span>
                       </div>
                       <div className="flex items-center">
                         {m.location_type === "ONLINE" ? (
@@ -215,13 +217,11 @@ export function ResidentMeetingsClient({
                           <span className="text-xs font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700">
                             {m.meeting_type.replace(/_/g, " ")}
                           </span>
-                          <span className="text-xs text-slate-400">
-                            {new Date(m.scheduled_at).toLocaleDateString(undefined, {
-                              year: "numeric",
-                              month: "short",
-                              day: "numeric",
-                            })}
-                          </span>
+                          <TimeDisplay
+                            date={m.scheduled_at}
+                            format="date"
+                            className="text-xs text-slate-400"
+                          />
                         </div>
                         <h3 className="font-bold text-base text-slate-900 dark:text-white">
                           {m.title}

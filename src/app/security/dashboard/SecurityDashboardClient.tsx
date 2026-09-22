@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { Profile, Society, RoleId, Visitor, VisitorPurpose } from "@/lib/types/database";
+import { TimeDisplay } from "@/components/ui/time-display";
 import {
   ShieldAlert,
   ShieldCheck,
@@ -39,12 +40,12 @@ const PURPOSE_CONFIG: Record<
   VisitorPurpose,
   { label: string; icon: React.ComponentType<{ className?: string }>; color: string }
 > = {
-  GUEST: { label: "Guest", icon: Users, color: "text-blue-600 bg-blue-50 dark:bg-blue-950/50" },
-  DELIVERY: { label: "Delivery", icon: Package, color: "text-amber-600 bg-amber-50 dark:bg-amber-950/50" },
-  CAB: { label: "Cab / Taxi", icon: Car, color: "text-indigo-600 bg-indigo-50 dark:bg-indigo-950/50" },
-  SERVICE: { label: "Service", icon: Wrench, color: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50" },
-  FAMILY: { label: "Family", icon: Heart, color: "text-rose-600 bg-rose-50 dark:bg-rose-950/50" },
-  OTHER: { label: "Visitor", icon: Users, color: "text-slate-600 bg-slate-50 dark:bg-slate-800" },
+  GUEST: { label: "Guest", icon: Users, color: "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60" },
+  DELIVERY: { label: "Delivery", icon: Package, color: "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60" },
+  CAB: { label: "Cab / Taxi", icon: Car, color: "text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60" },
+  SERVICE: { label: "Service", icon: Wrench, color: "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60" },
+  FAMILY: { label: "Family", icon: Heart, color: "text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60" },
+  OTHER: { label: "Visitor", icon: Users, color: "text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800" },
 };
 
 export function SecurityDashboardClient({
@@ -287,7 +288,7 @@ export function SecurityDashboardClient({
           </div>
 
           {/* Actions: New Walk-In Entry & Logout */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
             <button
               onClick={() => {
                 setWalkInError(null);
@@ -424,13 +425,13 @@ export function SecurityDashboardClient({
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           {/* Tabs */}
-          <div className="flex items-center space-x-2 border-b border-slate-200 dark:border-slate-800 pb-2">
+          <div className="flex items-center space-x-2 border-b border-slate-200 dark:border-slate-800 pb-2 overflow-x-auto max-w-full">
             <button
               onClick={() => setActiveTab("inside")}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 shrink-0 ${
                 activeTab === "inside"
                   ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
-                  : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-300"
+                  : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
               }`}
             >
               <span>Inside Campus</span>
@@ -440,10 +441,10 @@ export function SecurityDashboardClient({
             </button>
             <button
               onClick={() => setActiveTab("expected")}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 shrink-0 ${
                 activeTab === "expected"
                   ? "bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300"
-                  : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-300"
+                  : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
               }`}
             >
               <span>Expected Arrivals</span>
@@ -453,10 +454,10 @@ export function SecurityDashboardClient({
             </button>
             <button
               onClick={() => setActiveTab("history")}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 shrink-0 ${
                 activeTab === "history"
                   ? "bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200"
-                  : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-300"
+                  : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
               }`}
             >
               <span>Gate Log History</span>
@@ -529,11 +530,10 @@ export function SecurityDashboardClient({
                           <span className="text-[10px] uppercase font-bold text-slate-400 block">
                             Entry Time
                           </span>
-                          <span className="font-semibold text-slate-800 dark:text-slate-200">
-                            {visitor.check_in_at
-                              ? new Date(visitor.check_in_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-                              : "—"}
-                          </span>
+                          <TimeDisplay
+                            date={visitor.check_in_at}
+                            className="font-semibold text-slate-800 dark:text-slate-200"
+                          />
                         </div>
                         <div>
                           <span className="text-[10px] uppercase font-bold text-slate-400 block">
@@ -553,7 +553,7 @@ export function SecurityDashboardClient({
                         <button
                           onClick={() => handleCheckOut(visitor.id)}
                           disabled={loadingActionId === visitor.id}
-                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 text-xs font-bold transition shadow-sm disabled:opacity-50"
+                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100 text-xs font-bold transition shadow-sm disabled:opacity-50"
                         >
                           {loadingActionId === visitor.id ? (
                             "Updating..."
@@ -634,11 +634,15 @@ export function SecurityDashboardClient({
                       </div>
 
                       <div className="flex items-center justify-between pt-1">
-                        <span className="text-[11px] text-slate-400">
-                          {visitor.expected_arrival
-                            ? `Expected: ${new Date(visitor.expected_arrival).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
-                            : "Expected Today"}
-                        </span>
+                        {visitor.expected_arrival ? (
+                          <TimeDisplay
+                            date={visitor.expected_arrival}
+                            prefix="Expected: "
+                            className="text-[11px] text-slate-400"
+                          />
+                        ) : (
+                          <span className="text-[11px] text-slate-400">Expected Today</span>
+                        )}
 
                         <button
                           onClick={() => handleCheckIn(visitor.id)}
@@ -691,14 +695,10 @@ export function SecurityDashboardClient({
                         <span>Code: {v.pass_code}</span>
                         {v.vehicle_number && <span>Vehicle: {v.vehicle_number}</span>}
                         {v.check_in_at && (
-                          <span>
-                            In: {new Date(v.check_in_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                          </span>
+                          <TimeDisplay date={v.check_in_at} prefix="In: " />
                         )}
                         {v.check_out_at && (
-                          <span>
-                            Out: {new Date(v.check_out_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                          </span>
+                          <TimeDisplay date={v.check_out_at} prefix="Out: " />
                         )}
                       </div>
                     </div>

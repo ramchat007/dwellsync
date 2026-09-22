@@ -21,7 +21,7 @@ export default async function SecurityLayout({
   const profile = identity.effectiveUser;
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col selection:bg-amber-500 selection:text-slate-950">
+    <div className="dark min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-amber-500 selection:text-slate-950">
       {identity.isImpersonating && <ImpersonationBanner />}
 
       <SecurityHeader profile={profile} society={society} />

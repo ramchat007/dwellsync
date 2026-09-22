@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { Society, Visitor, VisitorPurpose } from "@/lib/types/database";
+import { TimeDisplay } from "@/components/ui/time-display";
 import {
   ShieldCheck,
   Plus,
@@ -350,13 +351,13 @@ export function ResidentVisitorsClient({
                         {isInside && pass.check_in_at && (
                           <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
                             <Clock className="w-3.5 h-3.5" />
-                            Entered: {new Date(pass.check_in_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                            <TimeDisplay date={pass.check_in_at} prefix="Entered: " />
                           </span>
                         )}
                         {!isInside && pass.expected_arrival && (
                           <span className="flex items-center gap-1 text-slate-500">
                             <Calendar className="w-3.5 h-3.5" />
-                            Expected: {new Date(pass.expected_arrival).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                            <TimeDisplay date={pass.expected_arrival} prefix="Expected: " />
                           </span>
                         )}
                         {pass.vehicle_number && (
@@ -412,14 +413,10 @@ export function ResidentVisitorsClient({
                       <span>Pass: {pass.pass_code}</span>
                       {pass.vehicle_number && <span>Vehicle: {pass.vehicle_number}</span>}
                       {pass.check_in_at && (
-                        <span>
-                          In: {new Date(pass.check_in_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                        </span>
+                        <TimeDisplay date={pass.check_in_at} prefix="In: " />
                       )}
                       {pass.check_out_at && (
-                        <span>
-                          Out: {new Date(pass.check_out_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                        </span>
+                        <TimeDisplay date={pass.check_out_at} prefix="Out: " />
                       )}
                     </div>
                   </div>
