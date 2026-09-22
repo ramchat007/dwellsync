@@ -194,6 +194,11 @@ async function main() {
         continue;
       }
       uid = newUser.user.id;
+    } else {
+      await adminClient.auth.admin.updateUserById(uid, {
+        password: DEFAULT_PASSWORD,
+        email_confirm: true,
+      });
     }
     userMap.set(p.email, uid);
 

@@ -77,6 +77,18 @@ export function SecurityDashboardClient({
 
   // Action loading state
   const [loadingActionId, setLoadingActionId] = useState<string | null>(null);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const handleLogout = async () => {
+    try {
+      setIsLoggingOut(true);
+      await fetch("/api/auth/logout", { method: "POST" });
+      window.location.href = "/login";
+    } catch (err) {
+      console.error("Logout failed:", err);
+      setIsLoggingOut(false);
+    }
+  };
 
   // Segment visitors
   const insideCampus = visitors.filter((v) => v.status === "CHECKED_IN");
@@ -274,17 +286,33 @@ export function SecurityDashboardClient({
             </p>
           </div>
 
-          {/* Action: New Walk-In Entry */}
-          <button
-            onClick={() => {
-              setWalkInError(null);
-              setIsWalkInOpen(true);
-            }}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs transition shadow-lg shadow-amber-500/20 shrink-0"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Quick Walk-In Entry</span>
-          </button>
+          {/* Actions: New Walk-In Entry & Logout */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                setWalkInError(null);
+                setIsWalkInOpen(true);
+              }}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs transition shadow-lg shadow-amber-500/20 shrink-0"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Quick Walk-In Entry</span>
+            </button>
+
+            <button
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+              title="Log Out of Security Portal"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-800 hover:bg-rose-950/70 border border-slate-700 hover:border-rose-800/80 text-slate-300 hover:text-rose-200 font-bold text-xs transition shrink-0"
+            >
+              {isLoggingOut ? (
+                <Loader2 className="w-4 h-4 animate-spin text-rose-400" />
+              ) : (
+                <LogOut className="w-4 h-4 text-rose-400" />
+              )}
+              <span>Log Out</span>
+            </button>
+          </div>
         </div>
 
         {/* Real-Time Gate Traffic Counters */}

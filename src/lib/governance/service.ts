@@ -110,6 +110,7 @@ export async function getCommittees(
       *,
       creator:profiles!committees_created_by_fkey(id, full_name, display_name),
       members:committee_members(
+      members:committee_members!committee_members_committee_id_fkey(
         id,
         user_id,
         designation,
@@ -128,6 +129,7 @@ export async function getCommittees(
   const { data, error } = await query;
   if (error) {
     console.error("[GovernanceService] Error fetching committees:", error);
+    console.error("[GovernanceService] Error fetching committees:", error.message || error);
     return [];
   }
 
