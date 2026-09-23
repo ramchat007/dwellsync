@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { createServerSupabaseClient } from "../supabase/server";
@@ -15,7 +16,7 @@ export { roleHasPermission, getPermissionsForRole, companyRoleHasPermission, get
 
 export const ACTIVE_SOCIETY_COOKIE_NAME = "DwellSyncHub_active_society";
 
-export async function getCurrentIdentity(): Promise<UserIdentity | null> {
+export const getCurrentIdentity = cache(async (): Promise<UserIdentity | null> => {
   const supabase = await createServerSupabaseClient();
   const {
     data: { user },
@@ -44,11 +45,34 @@ export async function getCurrentIdentity(): Promise<UserIdentity | null> {
   const cookieStore = await cookies();
   const preferredSocietyId = cookieStore.get(ACTIVE_SOCIETY_COOKIE_NAME)?.value;
 
-  const { data: callerProfile } = await adminClient
-    .from("profiles")
-    .select("*")
-    .eq("id", resolvedUserId)
-    .maybeSingle();
+  const [
+    { data: callerProfile },
+    { data: platformAdmin },
+    impersonationSession,
+    { data: userMemberships },
+  ] = await Promise.all([
+    adminClient
+      .from("profiles")
+      .select("*")
+      .eq("id", resolvedUserId)
+      .maybeSingle(),
+    adminClient
+      .from("platform_admins")
+      .select("id, role_id")
+      .eq("user_id", resolvedUserId)
+      .eq("role_id", "SUPER_ADMIN")
+      .maybeSingle(),
+    getActiveImpersonationSession(),
+    adminClient
+      .from("society_memberships")
+      .select(`
+        *,
+        society:societies (*)
+      `)
+      .eq("user_id", resolvedUserId)
+      .eq("status", "ACTIVE")
+      .order("created_at", { ascending: true }),
+  ]);
 
   const fallbackProfile: Profile = callerProfile || {
     id: resolvedUserId,
@@ -62,18 +86,9 @@ export async function getCurrentIdentity(): Promise<UserIdentity | null> {
     updated_at: new Date().toISOString(),
   };
 
-  const { data: platformAdmin } = await adminClient
-    .from("platform_admins")
-    .select("id, role_id")
-    .eq("user_id", resolvedUserId)
-    .eq("role_id", "SUPER_ADMIN")
-    .maybeSingle();
-
   const isCallerSuperAdmin = !!platformAdmin;
 
   // 1. Evaluate Impersonation Mode
-  const impersonationSession = await getActiveImpersonationSession();
-
   if (impersonationSession && impersonationSession.original_admin_id === resolvedUserId) {
     const targetProfile: Profile = impersonationSession.target_user || {
       id: impersonationSession.target_user_id,
@@ -158,16 +173,6 @@ export async function getCurrentIdentity(): Promise<UserIdentity | null> {
   }
 
   // 3. Normal Multi-Society User Mode
-  const { data: userMemberships } = await adminClient
-    .from("society_memberships")
-    .select(`
-      *,
-      society:societies (*)
-    `)
-    .eq("user_id", resolvedUserId)
-    .eq("status", "ACTIVE")
-    .order("created_at", { ascending: true });
-
   const activeMemberships = (userMemberships as (SocietyMembership & { society: Society })[]) || [];
 
   // Match preferred society from cookie or pick primary active membership
@@ -228,7 +233,7 @@ export async function getCurrentIdentity(): Promise<UserIdentity | null> {
     permissions,
     impersonationSession: null,
   };
-}
+});
 
 export async function requireAuth(): Promise<UserIdentity> {
   const identity = await getCurrentIdentity();
@@ -248,95 +253,115 @@ export async function requireSuperAdmin(): Promise<UserIdentity> {
   return identity;
 }
 
-export async function requireSocietyAccess(
-  societyId: string
-): Promise<{ identity: UserIdentity; society: Society }> {
-  const identity = await requireAuth();
-  const adminClient = createAdminClient();
+export const requireSocietyAccess = cache(
+  async (societyId: string): Promise<{ identity: UserIdentity; society: Society }> => {
+    const identity = await requireAuth();
 
-  const { data: society, error } = await adminClient
-    .from("societies")
-    .select("*")
-    .eq("id", societyId)
-    .single();
-
-  if (error || !society) {
-    redirect("/unauthorized");
-  }
-
-  if (identity.isSuperAdmin && !identity.isImpersonating) {
-    return { identity, society: society as Society };
-  }
-
-  // Preserve tenant boundary during impersonation
-  if (identity.isImpersonating && identity.impersonationSession?.target_society_id) {
-    if (identity.impersonationSession.target_society_id !== societyId) {
-      redirect("/unauthorized");
+    // Preserve tenant boundary during impersonation
+    if (identity.isImpersonating && identity.impersonationSession?.target_society_id) {
+      if (identity.impersonationSession.target_society_id !== societyId) {
+        redirect("/unauthorized");
+      }
     }
-  }
 
-  const { data: membership } = await adminClient
-    .from("society_memberships")
-    .select("*")
-    .eq("society_id", societyId)
-    .eq("user_id", identity.effectiveUser.id)
-    .eq("status", "ACTIVE")
-    .maybeSingle();
+    let society: Society | null = null;
+    let membership: SocietyMembership | null = null;
 
-  if (!membership) {
-    // Check explicit active company society access
-    const { data: companyAccess } = await adminClient
-      .from("management_company_society_access")
-      .select(`
-        id,
-        status,
-        member:management_company_members!inner (
+    // Fast path: check in-memory availableSocieties from getCurrentIdentity
+    const matchedMembership = identity.availableSocieties?.find(
+      (m) => m.society_id === societyId
+    );
+    if (matchedMembership && matchedMembership.society) {
+      membership = matchedMembership;
+      society = matchedMembership.society;
+    }
+
+    const adminClient = createAdminClient();
+
+    if (!society) {
+      const { data: socData, error } = await adminClient
+        .from("societies")
+        .select("*")
+        .eq("id", societyId)
+        .single();
+
+      if (error || !socData) {
+        redirect("/unauthorized");
+      }
+      society = socData as Society;
+    }
+
+    if (identity.isSuperAdmin && !identity.isImpersonating) {
+      return { identity, society: society as Society };
+    }
+
+    if (!membership) {
+      const { data: memData } = await adminClient
+        .from("society_memberships")
+        .select("*")
+        .eq("society_id", societyId)
+        .eq("user_id", identity.effectiveUser.id)
+        .eq("status", "ACTIVE")
+        .maybeSingle();
+
+      membership = memData;
+    }
+
+    if (!membership) {
+      // Check explicit active company society access
+      const { data: companyAccess } = await adminClient
+        .from("management_company_society_access")
+        .select(`
           id,
-          user_id,
-          role,
           status,
-          company:management_companies!inner (
+          member:management_company_members!inner (
             id,
+            user_id,
+            role,
+            status,
+            company:management_companies!inner (
+              id,
+              status
+            )
+          ),
+          company_society:management_company_societies!inner (
+            id,
+            society_id,
             status
           )
-        ),
-        company_society:management_company_societies!inner (
-          id,
-          society_id,
-          status
-        )
-      `)
-      .eq("member.user_id", identity.effectiveUser.id)
-      .eq("member.status", "ACTIVE")
-      .eq("member.company.status", "ACTIVE")
-      .eq("company_society.society_id", societyId)
-      .eq("company_society.status", "ACTIVE")
-      .eq("status", "ACTIVE")
-      .maybeSingle();
+        `)
+        .eq("member.user_id", identity.effectiveUser.id)
+        .eq("member.status", "ACTIVE")
+        .eq("member.company.status", "ACTIVE")
+        .eq("company_society.society_id", societyId)
+        .eq("company_society.status", "ACTIVE")
+        .eq("status", "ACTIVE")
+        .maybeSingle();
 
-    if (!companyAccess) {
-      redirect("/unauthorized");
+      if (!companyAccess) {
+        redirect("/unauthorized");
+      }
     }
+
+    // Strictly scope the returned identity's role, permissions, and society to the target societyId
+    const effectiveRole = identity.isImpersonating
+      ? ((identity.impersonationSession?.target_role_id as RoleId) || (membership ? (membership.role_id as RoleId) : null))
+      : (membership ? (membership.role_id as RoleId) : null);
+    const scopedRole = effectiveRole;
+    const scopedPermissions = scopedRole ? getPermissionsForRole(scopedRole) : [];
+
+    const scopedIdentity: UserIdentity = {
+      ...identity,
+      isSuperAdmin: false,
+      currentSociety: society as Society,
+      currentRole: scopedRole as any,
+      permissions: scopedPermissions,
+      isSocietyAdmin: scopedRole === "SOCIETY_ADMIN",
+    };
+
+    return { identity: scopedIdentity, society: society as Society };
   }
-
-  // Strictly scope the returned identity's role, permissions, and society to the target societyId
-  const effectiveRole = identity.isImpersonating
-    ? ((identity.impersonationSession?.target_role_id as RoleId) || (membership ? (membership.role_id as RoleId) : null))
-    : (membership ? (membership.role_id as RoleId) : null);
-  const scopedRole = effectiveRole;
-  const scopedPermissions = scopedRole ? getPermissionsForRole(scopedRole) : [];
-
-  const scopedIdentity: UserIdentity = {
-    ...identity,
-    isSuperAdmin: false,
-    currentSociety: society as Society,
-    currentRole: scopedRole as any,
-    permissions: scopedPermissions,
-    isSocietyAdmin: scopedRole === "SOCIETY_ADMIN",
-  };
-
-  return { identity: scopedIdentity, society: society as Society };
-}
+);
 
 export interface CompanyAccessContext {
   identity: UserIdentity;
@@ -346,53 +371,55 @@ export interface CompanyAccessContext {
   permissions: string[];
 }
 
-export async function requireCompanyAccess(companyId: string): Promise<CompanyAccessContext> {
-  const identity = await requireAuth();
-  const adminClient = createAdminClient();
+export const requireCompanyAccess = cache(
+  async (companyId: string): Promise<CompanyAccessContext> => {
+    const identity = await requireAuth();
+    const adminClient = createAdminClient();
 
-  const { data: company, error } = await adminClient
-    .from("management_companies")
-    .select("*")
-    .eq("id", companyId)
-    .single();
+    const { data: company, error } = await adminClient
+      .from("management_companies")
+      .select("*")
+      .eq("id", companyId)
+      .single();
 
-  if (error || !company || company.status !== "ACTIVE") {
-    redirect("/unauthorized");
-  }
+    if (error || !company || company.status !== "ACTIVE") {
+      redirect("/unauthorized");
+    }
 
-  if (identity.isSuperAdmin && !identity.isImpersonating) {
+    if (identity.isSuperAdmin && !identity.isImpersonating) {
+      return {
+        identity,
+        company: company as ManagementCompany,
+        membership: null,
+        role: "SUPER_ADMIN",
+        permissions: Object.values(PERMISSIONS),
+      };
+    }
+
+    const { data: member } = await adminClient
+      .from("management_company_members")
+      .select("*")
+      .eq("management_company_id", companyId)
+      .eq("user_id", identity.effectiveUser.id)
+      .eq("status", "ACTIVE")
+      .maybeSingle();
+
+    if (!member) {
+      redirect("/unauthorized");
+    }
+
+    const role = member.role as CompanyRole;
+    const permissions = getPermissionsForCompanyRole(role);
+
     return {
       identity,
       company: company as ManagementCompany,
-      membership: null,
-      role: "SUPER_ADMIN",
-      permissions: Object.values(PERMISSIONS),
+      membership: member as ManagementCompanyMember,
+      role,
+      permissions,
     };
   }
-
-  const { data: member } = await adminClient
-    .from("management_company_members")
-    .select("*")
-    .eq("management_company_id", companyId)
-    .eq("user_id", identity.effectiveUser.id)
-    .eq("status", "ACTIVE")
-    .maybeSingle();
-
-  if (!member) {
-    redirect("/unauthorized");
-  }
-
-  const role = member.role as CompanyRole;
-  const permissions = getPermissionsForCompanyRole(role);
-
-  return {
-    identity,
-    company: company as ManagementCompany,
-    membership: member as ManagementCompanyMember,
-    role,
-    permissions,
-  };
-}
+);
 
 export async function requireCompanyRole(
   companyId: string,
@@ -499,15 +526,15 @@ export async function getEffectiveIdentity(): Promise<UserIdentity | null> {
  * Server component / route helper that enforces society administrator access.
  * Redirects to /unauthorized if caller is not an authorized society admin.
  */
-export async function requireSocietyAdmin(
-  societyId: string
-): Promise<{ identity: UserIdentity; society: Society }> {
-  const { identity, society } = await requireSocietyAccess(societyId);
+export const requireSocietyAdmin = cache(
+  async (societyId: string): Promise<{ identity: UserIdentity; society: Society }> => {
+    const { identity, society } = await requireSocietyAccess(societyId);
 
-  if (!isAuthorizedSocietyAdmin(identity, societyId)) {
-    redirect("/unauthorized");
+    if (!isAuthorizedSocietyAdmin(identity, societyId)) {
+      redirect("/unauthorized");
+    }
+
+    return { identity, society };
   }
-
-  return { identity, society };
-}
+);
 

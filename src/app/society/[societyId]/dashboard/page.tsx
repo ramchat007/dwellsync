@@ -35,8 +35,10 @@ export default async function SocietyDashboardPage({
   params: Promise<{ societyId: string }>;
 }) {
   const { societyId } = await params;
-  const { identity, society } = await requireSocietyAccess(societyId);
-  const metrics = await getSocietyMetrics(societyId);
+  const [{ identity, society }, metrics] = await Promise.all([
+    requireSocietyAccess(societyId),
+    getSocietyMetrics(societyId),
+  ]);
 
   const isAdmin = isAuthorizedSocietyAdmin(identity, societyId);
   let pendingRequestsCount = 0;

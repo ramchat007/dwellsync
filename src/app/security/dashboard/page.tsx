@@ -19,48 +19,47 @@ export default async function SecurityDashboardPage() {
   let visitors: any[] = [];
 
   if (society) {
-    // 1. Fetch society units for walk-in destination lookup
-    const { data: units } = await adminClient
-      .from("units")
-      .select(`
-        id,
-        unit_number,
-        building:buildings (name, code),
-        wing:wings (name, code)
-      `)
-      .eq("society_id", society.id)
-      .order("unit_number", { ascending: true })
-      .limit(150);
-
-    societyUnits = units || [];
-
-    // 2. Fetch visitor queue for security checkpoint
-    const { data: vList } = await adminClient
-      .from("visitors")
-      .select(`
-        *,
-        unit:units (
+    // 1. Fetch society units and visitor queue concurrently
+    const [{ data: units }, { data: vList }] = await Promise.all([
+      adminClient
+        .from("units")
+        .select(`
           id,
           unit_number,
           building:buildings (name, code),
-          wing:wings (name, code),
-          floor:floors (name, floor_number)
-        ),
-        creator:profiles!visitors_created_by_fkey (
-          id,
-          full_name,
-          display_name,
-          phone
-        ),
-        check_in_guard:profiles!visitors_check_in_by_fkey (
-          id,
-          full_name
-        )
-      `)
-      .eq("society_id", society.id)
-      .order("created_at", { ascending: false })
-      .limit(100);
+          wing:wings (name, code)
+        `)
+        .eq("society_id", society.id)
+        .order("unit_number", { ascending: true })
+        .limit(150),
+      adminClient
+        .from("visitors")
+        .select(`
+          *,
+          unit:units (
+            id,
+            unit_number,
+            building:buildings (name, code),
+            wing:wings (name, code),
+            floor:floors (name, floor_number)
+          ),
+          creator:profiles!visitors_created_by_fkey (
+            id,
+            full_name,
+            display_name,
+            phone
+          ),
+          check_in_guard:profiles!visitors_check_in_by_fkey (
+            id,
+            full_name
+          )
+        `)
+        .eq("society_id", society.id)
+        .order("created_at", { ascending: false })
+        .limit(100),
+    ]);
 
+    societyUnits = units || [];
     visitors = vList || [];
   }
 

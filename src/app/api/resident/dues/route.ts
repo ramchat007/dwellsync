@@ -24,20 +24,21 @@ export async function GET() {
     const userId = identity.effectiveUser.id;
     const adminClient = createAdminClient();
 
-    // 1. Identify all units where user is an active Owner or Occupant
-    const { data: ownedUnits } = await adminClient
-      .from("unit_owners")
-      .select("unit_id, unit:units(id, unit_number, building:buildings(name))")
-      .eq("society_id", societyId)
-      .eq("user_id", userId)
-      .eq("status", "ACTIVE");
-
-    const { data: occupiedUnits } = await adminClient
-      .from("unit_occupancies")
-      .select("unit_id, unit:units(id, unit_number, building:buildings(name))")
-      .eq("society_id", societyId)
-      .eq("user_id", userId)
-      .eq("status", "ACTIVE");
+    // 1. Identify all units where user is an active Owner or Occupant concurrently
+    const [{ data: ownedUnits }, { data: occupiedUnits }] = await Promise.all([
+      adminClient
+        .from("unit_owners")
+        .select("unit_id, unit:units(id, unit_number, building:buildings(name))")
+        .eq("society_id", societyId)
+        .eq("user_id", userId)
+        .eq("status", "ACTIVE"),
+      adminClient
+        .from("unit_occupancies")
+        .select("unit_id, unit:units(id, unit_number, building:buildings(name))")
+        .eq("society_id", societyId)
+        .eq("user_id", userId)
+        .eq("status", "ACTIVE"),
+    ]);
 
     const userUnitMap = new Map<string, any>();
     (ownedUnits || []).forEach((u) => {
@@ -57,55 +58,53 @@ export async function GET() {
       });
     }
 
-    // 2. Fetch Invoices for these authorized units only
-    const { data: invoices, error: invError } = await adminClient
-      .from("invoices")
-      .select(`
-        *,
-        unit:units (
-          id,
-          unit_number,
-          building:buildings (name, code),
-          wing:wings (name, code)
-        ),
-        billing_cycle:billing_cycles (
-          id,
-          name,
-          period_start,
-          period_end
-        )
-      `)
-      .eq("society_id", societyId)
-      .in("unit_id", unitIds)
-      .order("created_at", { ascending: false });
-
-    if (invError) {
-      console.error("[API/resident/dues] Error fetching invoices:", invError);
-      return NextResponse.json({ error: "Failed to fetch invoices" }, { status: 500 });
-    }
-
-    // 3. Fetch Receipts for these authorized units only
-    const { data: receipts, error: recError } = await adminClient
-      .from("receipts")
-      .select(`
-        *,
-        unit:units (
-          id,
-          unit_number
-        ),
-        invoice:invoices (
-          id,
-          invoice_number
-        ),
-        payment:payments (
-          id,
-          payment_method,
-          reference_number
-        )
-      `)
-      .eq("society_id", societyId)
-      .in("unit_id", unitIds)
-      .order("receipt_date", { ascending: false });
+    // 2. Fetch Invoices and Receipts for these authorized units concurrently
+    const [
+      { data: invoices, error: invError },
+      { data: receipts, error: recError },
+    ] = await Promise.all([
+      adminClient
+        .from("invoices")
+        .select(`
+          *,
+          unit:units (
+            id,
+            unit_number,
+            building:buildings (name, code),
+            wing:wings (name, code)
+          ),
+          billing_cycle:billing_cycles (
+            id,
+            name,
+            period_start,
+            period_end
+          )
+        `)
+        .eq("society_id", societyId)
+        .in("unit_id", unitIds)
+        .order("created_at", { ascending: false }),
+      adminClient
+        .from("receipts")
+        .select(`
+          *,
+          unit:units (
+            id,
+            unit_number
+          ),
+          invoice:invoices (
+            id,
+            invoice_number
+          ),
+          payment:payments (
+            id,
+            payment_method,
+            reference_number
+          )
+        `)
+        .eq("society_id", societyId)
+        .in("unit_id", unitIds)
+        .order("receipt_date", { ascending: false }),
+    ]);
 
     if (recError) {
       console.error("[API/resident/dues] Error fetching receipts:", recError);

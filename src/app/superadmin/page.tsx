@@ -25,19 +25,20 @@ export const dynamic = "force-dynamic";
 
 export default async function SuperAdminDashboardPage() {
   const identity = await getCurrentIdentity();
-  const metrics = await getPlatformMetrics();
   const adminClient = createAdminClient();
 
-  const { count: activeImpersonations } = await adminClient
-    .from("impersonation_sessions")
-    .select("*", { count: "exact", head: true })
-    .eq("status", "ACTIVE");
-
-  const { data: recentAudits } = await adminClient
-    .from("audit_logs")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(6);
+  const [metrics, { count: activeImpersonations }, { data: recentAudits }] = await Promise.all([
+    getPlatformMetrics(),
+    adminClient
+      .from("impersonation_sessions")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "ACTIVE"),
+    adminClient
+      .from("audit_logs")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(6),
+  ]);
 
   return (
     <div className="space-y-6">
