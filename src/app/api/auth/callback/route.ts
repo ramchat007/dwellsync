@@ -12,15 +12,31 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
+  const errorParam = searchParams.get("error");
+  const errorDescription = searchParams.get("error_description");
   const rawRedirectTo = searchParams.get("redirectTo");
   const origin = getAppOrigin(request);
   const safeRedirectTo = sanitizeRedirectPath(rawRedirectTo, "/dashboard");
+
+  if (errorParam) {
+    console.error("[OAuth Callback] Provider returned error:", errorParam, errorDescription);
+    return NextResponse.redirect(
+      `${origin}/login?error=${encodeURIComponent(errorDescription || errorParam)}`
+    );
+  }
 
   if (code) {
     const supabase = await createServerSupabaseClient();
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
-    if (!error && data.user) {
+    if (error) {
+      console.error("[OAuth Callback] exchangeCodeForSession failed:", error.message);
+      return NextResponse.redirect(
+        `${origin}/login?error=${encodeURIComponent(error.message || "Failed to exchange auth code.")}`
+      );
+    }
+
+    if (data.user) {
       const adminClient = createAdminClient();
 
       // Check if user is Super Admin
@@ -54,20 +70,20 @@ export async function GET(request: Request) {
       const preferredSocietyId = cookieStore.get("DwellSyncHub_active_society")?.value;
 
       const routing = resolvePostLoginRouting(identity, preferredSocietyId);
+      const response = NextResponse.redirect(`${origin}${routing.destination}`);
 
       if (routing.activeSocietyId) {
-        cookieStore.set("DwellSyncHub_active_society", routing.activeSocietyId, {
+        response.cookies.set("DwellSyncHub_active_society", routing.activeSocietyId, {
           path: "/",
           httpOnly: false,
           sameSite: "lax",
           maxAge: 30 * 24 * 60 * 60,
         });
       } else if (routing.isUnlinked || routing.requiresSocietySelection) {
-        // Clear stale/unauthorized society cookie if unlinked or needing re-selection
-        cookieStore.delete("DwellSyncHub_active_society");
+        response.cookies.delete("DwellSyncHub_active_society");
       }
 
-      return NextResponse.redirect(`${origin}${routing.destination}`);
+      return response;
     }
   }
 

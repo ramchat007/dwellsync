@@ -13,11 +13,19 @@ export async function GET(req: Request) {
     const { url, error } = await authService.getGoogleOAuthUrl(redirectTo, origin);
     if (error || !url) {
       return NextResponse.json({ error: error || "OAuth provider not configured" }, { status: 500 });
+      console.error("[Google OAuth] Failed to get OAuth URL:", error);
+      return NextResponse.redirect(
+        `${origin}/login?error=${encodeURIComponent(error || "Google OAuth provider is not configured.")}`
+      );
     }
 
     return NextResponse.redirect(url);
   } catch (err: any) {
     return NextResponse.json({ error: "Failed to initialize Google OAuth." }, { status: 500 });
+    console.error("[Google OAuth] Exception in route:", err);
+    return NextResponse.redirect(
+      `${getAppOrigin(req)}/login?error=${encodeURIComponent(err?.message || "Failed to initialize Google OAuth.")}`
+    );
   }
 }
 

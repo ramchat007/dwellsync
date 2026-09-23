@@ -56,7 +56,13 @@ export function FastLoginForm() {
   const [password, setPassword] = useState("");
 
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(() => {
+    const err = searchParams.get("error");
+    if (!err) return null;
+    if (err === "oauth_callback_failed") return "Google authentication failed or was cancelled. Please try again.";
+    if (err === "oauth_init_failed") return "Google login is not properly configured on this server.";
+    return decodeURIComponent(err);
+  });
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [isDevMode, setIsDevMode] = useState(false);
   const [countdown, setCountdown] = useState(30);
