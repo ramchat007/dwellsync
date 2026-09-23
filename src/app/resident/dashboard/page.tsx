@@ -23,37 +23,20 @@ export default async function ResidentDashboardPage() {
     const userId = identity.effectiveUser.id;
 
     // 1. Fetch owned units, occupied units, household members, and notices in parallel
-    const [
-      { data: ownedUnits },
-      { data: occupiedUnits },
-      { data: fData },
-      { data: nData },
-    ] = await Promise.all([
+    const [ownedRes, occupiedRes, fRes, nRes] = await Promise.all([
       adminClient
         .from("unit_owners")
-        .select(`
-          *,
-          unit:units (
-            *,
-            building:buildings (id, name, code),
-            wing:wings (id, name, code),
-            floor:floors (id, name, floor_number)
-          )
-        `)
+        .select(
+          "*, unit:units (*, building:buildings (id, name, code), wing:wings (id, name, code), floor:floors (id, name, floor_number))"
+        )
         .eq("society_id", societyId)
         .eq("user_id", userId)
         .eq("status", "ACTIVE"),
       adminClient
         .from("unit_occupancies")
-        .select(`
-          *,
-          unit:units (
-            *,
-            building:buildings (id, name, code),
-            wing:wings (id, name, code),
-            floor:floors (id, name, floor_number)
-          )
-        `)
+        .select(
+          "*, unit:units (*, building:buildings (id, name, code), wing:wings (id, name, code), floor:floors (id, name, floor_number))"
+        )
         .eq("society_id", societyId)
         .eq("user_id", userId)
         .eq("status", "ACTIVE"),
@@ -72,8 +55,10 @@ export default async function ResidentDashboardPage() {
         .limit(3),
     ]);
 
-    householdMembers = fData || [];
-    notices = nData || [];
+    const ownedUnits = ownedRes?.data;
+    const occupiedUnits = occupiedRes?.data;
+    householdMembers = fRes?.data || [];
+    notices = nRes?.data || [];
 
     if (ownedUnits && ownedUnits.length > 0) {
       ownedUnits.forEach((o: any) => {
@@ -125,12 +110,9 @@ export default async function ResidentDashboardPage() {
       if (membership?.unit_number) {
         const { data: fallbackUnit } = await adminClient
           .from("units")
-          .select(`
-            *,
-            building:buildings (id, name, code),
-            wing:wings (id, name, code),
-            floor:floors (id, name, floor_number)
-          `)
+          .select(
+            "*, building:buildings (id, name, code), wing:wings (id, name, code), floor:floors (id, name, floor_number)"
+          )
           .eq("society_id", societyId)
           .eq("unit_number", membership.unit_number)
           .maybeSingle();
@@ -155,4 +137,3 @@ export default async function ResidentDashboardPage() {
     </div>
   );
 }
-
