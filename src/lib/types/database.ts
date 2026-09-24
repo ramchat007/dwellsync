@@ -67,6 +67,36 @@ export type InvitationStatus = "PENDING" | "ACCEPTED" | "EXPIRED" | "REVOKED";
 export type AccessRequestStatus = "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
 export type AccessRequestRole = "OWNER" | "TENANT" | "RESIDENT";
 
+export type VehicleType = "TWO_WHEELER" | "FOUR_WHEELER" | "BICYCLE" | "COMMERCIAL" | "OTHER";
+export type VehicleFuelType = "PETROL" | "DIESEL" | "ELECTRIC" | "CNG" | "HYBRID";
+
+export interface VehicleDefinition {
+  vehicle_type: VehicleType;
+  plate_number: string;
+  make_model?: string | null;
+  color?: string | null;
+  fuel_type?: VehicleFuelType | string | null;
+  is_ev?: boolean;
+}
+
+export interface SocietyVehicle {
+  id: string;
+  society_id: string;
+  unit_id: string | null;
+  user_id: string | null;
+  vehicle_type: VehicleType;
+  plate_number: string;
+  make_model: string | null;
+  color: string | null;
+  fuel_type: VehicleFuelType;
+  is_ev: boolean;
+  parking_slot_number: string | null;
+  parking_type: string | null;
+  status: "ACTIVE" | "INACTIVE";
+  created_at: string;
+  updated_at: string;
+}
+
 export interface SocietyAccessRequest {
   id: string;
   society_id: string;
@@ -78,6 +108,23 @@ export interface SocietyAccessRequest {
   applicant_email: string | null;
   requested_role: AccessRequestRole;
   status: AccessRequestStatus;
+  building_name?: string | null;
+  wing_name?: string | null;
+  floor_number?: number | null;
+  unit_type?: UnitType | null;
+  area_sqft?: number | null;
+  has_parking?: boolean | null;
+  parking_slot_number?: string | null;
+  parking_type?: string | null;
+  vehicles?: VehicleDefinition[] | null;
+  document_type?: string | null;
+  document_url?: string | null;
+  document_name?: string | null;
+  document_file_size_kb?: number | null;
+  lease_start_date?: string | null;
+  lease_end_date?: string | null;
+  owner_contact_name?: string | null;
+  owner_contact_phone?: string | null;
   notes: string | null;
   reviewed_by: string | null;
   reviewed_at: string | null;

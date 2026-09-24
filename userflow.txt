@@ -1,0 +1,73 @@
+🏁 The 4-Stage Testing Playbook
+STAGE 1: Society Foundation Setup
+Persona: Society Admin (admin@uat.internal / TestPassword@123)
+Goal: Understand how the physical building and resident roster are organized.
+	Check Physical Hierarchy:
+	Go to: Units (/society/[id]/units)
+	Flow: View Tower A and Tower B. Notice 10 apartments with their floor, BHK configuration, and status (OCCUPIED vs VACANT).
+	Check Member Roster & Ownership:
+	Go to: Members (/society/[id]/members)
+	Flow: Inspect the 12 pre-seeded users. Notice how Vikram is SOCIETY_ADMIN (Unit A-101), Priya is OWNER (Unit A-201), and Amit is TENANT (Unit B-201).
+	Check Managing Committee:
+	Go to: Committees (/society/[id]/committees)
+	Flow: Open Managing Committee (2026-2028). Notice Ananya Deshmukh assigned as Secretary and Rajesh Iyer as Treasurer.
+____________________________________________
+STAGE 2: Daily Living & Community Operations
+Goal: Test how Admins, Residents, and Security Guards collaborate in daily operations.
+Step 4: Admin Publishes a Community Notice
+	Still as Society Admin: Go to Notices (/society/[id]/notices)
+	Action: Click Create Notice → Title: "Elevator Maintenance on Friday" → Category: MAINTENANCE → Priority: HIGH → Click Publish.
+	Verify: The notice appears live on the board.
+Step 5 & 6: Resident Reads Notice, Books Amenity & Invites a Visitor
+	Log Out and sign in as Resident: resident@uat.internal / TestPassword@123 (Rahul Sharma, Flat B-102).
+	Action A (Notices): Check the Dashboard → Confirm the new "Elevator Maintenance" notice is visible.
+	Action B (Amenity Booking): Go to Amenities (/resident/amenities) → Select Clubhouse & Community Hall → Pick tomorrow's date → Click Book Now.
+	Action C (Invite a Visitor): Go to Visitors (/resident/visitors) → Click New Visitor → Name: "Swiggy Delivery", Phone: 9800011122, Purpose: DELIVERY → Submit.
+	Verify: A 4-digit Entry Passcode is generated (e.g., 4421).
+Step 7: Security Guard Checks the Visitor at the Gate
+	Log Out and sign in as Security: security@uat.internal / TestPassword@123 (Ramesh Shinde).
+	Action: You land on the Gate Portal (/security/gate).
+	Flow: Enter the passcode generated in Step 6 into the quick search box. Click Check In.
+	Verify: The visitor status changes from EXPECTED to CHECKED_IN with current timestamp.
+Step 8 & 9: Resident Logs a Ticket → Admin Resolves It
+	Log in as Resident (resident@uat.internal): Go to Complaints (/resident/complaints) → Click Raise Complaint → Category: PLUMBING, Title: "Water Tap Leaking in Master Bathroom" → Submit.
+	Log back in as Admin (admin@uat.internal): Go to Complaints (/society/[id]/complaints) → Open the new ticket → Change status to IN_PROGRESS → Add note "Plumber assigned" → Resolve it.
+	Verify: The SLA timeline updates live with each state transition.
+________________________________________
+STAGE 3: The Financial & Maintenance Cycle
+Goal: Test how billing flows from society management to the resident.
+	Treasurer Inspects Billing Cycle:
+	Log in as Treasurer: treasurer@uat.internal / TestPassword@123 (Rajesh Iyer).
+	Go to: Billing (/society/[id]/billing)
+	Flow: Review the September 2026 cycle. Notice Unit B-102 has an Overdue Invoice of ₹4,500.
+	Resident Checks Dues:
+	Log in as Resident (resident@uat.internal).
+	Go to: Maintenance Dues (/resident/dues)
+	Flow: The resident sees their ₹4,500 pending bill, breakdown of charges, and due date.
+	Treasurer Checks Bank & Ledger:
+	Log back in as Treasurer → Go to Finance (/society/[id]/finance).
+	Flow: Check the Chart of Accounts and the HDFC Bank Account (₹5,00,000 balance).
+________________________________________
+STAGE 4: Platform Administration & Super Admin Controls
+Goal: Test platform-level oversight and impersonation.
+	Log in with your Developer Account: ramchat007@gmail.com
+	Platform Management: Go to Super Admin (/superadmin/dashboard).
+	"View As" Impersonation:
+	Go to /superadmin/view-as.
+	Flow: Click View As next to [UAT] DwellSync Grand Residency.
+	Verify: An impersonation banner appears at the top. You are browsing the society as its admin without needing their credentials. Click Exit Impersonation to safely return.
+	Audit Logs:
+	Go to /superadmin/audit.
+	Verify: Every single action you performed in Stages 1–3 (notices, bookings, complaints, appointments) has an immutable security log entry with actor and timestamp.
+________________________________________
+Summary Checklist for Today's Test
+#	What to Test First	User Account	Page Route
+1	Society Units & Members	admin@uat.internal	/society/[id]/members
+2	Post a Notice	admin@uat.internal	/society/[id]/notices
+3	Book an Amenity	resident@uat.internal	/resident/amenities
+4	Gate Pass & Check-In	security@uat.internal	/security/gate
+5	Ticket / Helpdesk SLA	resident → admin	/complaints
+6	Maintenance Bill	treasurer → resident	/billing & /resident/dues
+7	View As / Audit	ramchat007@gmail.com	/superadmin/view-as
+Start with Step 1 as Society Admin (admin@uat.internal) and follow this sequence—everything will naturally connect.
+

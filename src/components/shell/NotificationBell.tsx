@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { Bell, Check, CheckCheck, Loader2, ExternalLink, ShieldAlert, FileText, Wrench, Receipt, Calendar, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -26,28 +26,73 @@ export function NotificationBell() {
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const isMountedRef = useRef<boolean>(true);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
+    // Skip if offline or tab is hidden
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      return;
+    }
+    if (typeof document !== "undefined" && document.hidden) {
+      return;
+    }
+
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     try {
-      setIsLoading(true);
-      const res = await fetch("/api/resident/notifications?limit=10");
+      if (isMountedRef.current) setIsLoading(true);
+      const res = await fetch("/api/resident/notifications?limit=10", {
+        signal: controller.signal,
+        headers: { "Cache-Control": "no-cache" },
+      });
       if (res.ok) {
         const data = await res.json();
-        setNotifications(data.notifications || []);
-        setUnreadCount(data.unreadCount || 0);
+        if (isMountedRef.current) {
+          setNotifications(data.notifications || []);
+          setUnreadCount(data.unreadCount || 0);
+        }
       }
-    } catch (err) {
-      console.error("[NotificationBell] Failed to fetch notifications:", err);
+    } catch (err: any) {
+      if (err?.name === "AbortError" || controller.signal.aborted) {
+        return;
+      }
+      console.warn("[NotificationBell] Notification fetch paused:", err?.message || err);
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
     }
-  };
+  }, []);
 
   useEffect(() => {
+    isMountedRef.current = true;
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 45000); // Polling every 45s
-    return () => clearInterval(interval);
-  }, []);
+
+    const interval = setInterval(() => {
+      fetchNotifications();
+    }, 45000); // Polling every 45s
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchNotifications();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      isMountedRef.current = false;
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, [fetchNotifications]);
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -66,14 +111,16 @@ export function NotificationBell() {
       const res = await fetch(`/api/resident/notifications/${id}/read`, {
         method: "PATCH",
       });
-      if (res.ok) {
+      if (res.ok && isMountedRef.current) {
         setNotifications((prev) =>
           prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
         );
         setUnreadCount((prev) => Math.max(0, prev - 1));
       }
-    } catch (err) {
-      console.error("[NotificationBell] Failed to mark as read:", err);
+    } catch (err: any) {
+      if (err?.name !== "AbortError") {
+        console.warn("[NotificationBell] Failed to mark as read:", err?.message || err);
+      }
     }
   };
 
@@ -82,12 +129,14 @@ export function NotificationBell() {
       const res = await fetch("/api/resident/notifications/mark-all-read", {
         method: "POST",
       });
-      if (res.ok) {
+      if (res.ok && isMountedRef.current) {
         setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
         setUnreadCount(0);
       }
-    } catch (err) {
-      console.error("[NotificationBell] Failed to mark all as read:", err);
+    } catch (err: any) {
+      if (err?.name !== "AbortError") {
+        console.warn("[NotificationBell] Failed to mark all as read:", err?.message || err);
+      }
     }
   };
 
